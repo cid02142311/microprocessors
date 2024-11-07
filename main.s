@@ -17,7 +17,7 @@ increment_phase:
 	movf	INDF0, W
 	movwf	PORTE, A
 	incf	INDF0, f
-;	call	delay
+	call	delay
 	movlw	0xfe		    ; Do not use 0xff: overflow
 	cpfsgt	INDF0, A
 	bra increment_phase
@@ -25,7 +25,7 @@ decrement_phase:
 	movf	INDF0, W
 	movwf	PORTE, A
 	decf	INDF0, f
-;	call	delay
+	call	delay
 	movlw	0x00
 	cpfseq	INDF0, A
 	bra decrement_phase
@@ -33,7 +33,7 @@ decrement_phase:
 delay:
 	movlw	0xff
 	movwf	0x21, A
-	call	delay1
+;	call	delay1
 	decfsz	0x20, A
 	bra	delay
 	return
