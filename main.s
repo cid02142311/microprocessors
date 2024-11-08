@@ -13,9 +13,11 @@ start:
 	lfsr	0, 0x10
 	movlw	0x00
 	movwf	INDF0, A
+	call	SPI_MasterInit
 increment_phase:
 	movf	INDF0, W
-	movwf	PORTE, A
+;	movwf	PORTE, A
+	call	SPI_MasterTransmit
 	incf	INDF0, f
 	call	delay
 	movlw	0xfe		    ; Do not use 0xff: overflow
@@ -23,7 +25,8 @@ increment_phase:
 	bra increment_phase
 decrement_phase:
 	movf	INDF0, W
-	movwf	PORTE, A
+;	movwf	PORTE, A
+	call	SPI_MasterTransmit
 	decf	INDF0, f
 	call	delay
 	movlw	0x00
@@ -42,14 +45,12 @@ delay1:
 	movwf	0x22, A
 	call	delay2
 	decfsz	0x21, A
-;	bra	delay1
+	bra	delay1
 	return
 delay2:
 	decfsz	0x22, A
 	bra	delay2
 	return
-	end	main
-
 SPI_MasterInit:
 ; Set Clock edge to negative
 	bcf	CKE2	; CKE bit in SSP2STAT,
@@ -69,3 +70,5 @@ Wait_Transmit:
 	bra 	Wait_Transmit
 	bcf 	PIR2, 5	; clear interrupt flag
 	return
+
+	end	main
