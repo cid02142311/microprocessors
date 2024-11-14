@@ -1,6 +1,7 @@
 #include <xc.inc>
 
 global  LCD_Setup, LCD_Write_Message
+global	LCD_SecondLine
 
 psect	udata_acs   ; named variables in access ram
 LCD_cnt_l:	ds 1   ; reserve 1 byte for variable LCD_cnt_l
@@ -53,6 +54,13 @@ LCD_Loop_message:
 	call    LCD_Send_Byte_D
 	decfsz  LCD_counter, A
 	bra	LCD_Loop_message
+	return
+
+LCD_SecondLine:
+	movlw	0xc0
+	call	LCD_Send_Byte_I
+	movlw	10
+	call	LCD_delay_x4us
 	return
 
 LCD_Send_Byte_I:	    ; Transmits byte stored in W to instruction reg
