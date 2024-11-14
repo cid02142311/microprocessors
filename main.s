@@ -2,7 +2,6 @@
 
 extrn	UART_Setup, UART_Transmit_Message  ; external subroutines
 extrn	LCD_Setup, LCD_Write_Message
-; extrn	LCD_SetCursor_SecondLine, LCD_delay_ms
 	
 psect	udata_acs   ; reserve data space in access ram
 counter:    ds 1    ; reserve one byte for a counter variable
@@ -49,14 +48,11 @@ loop: 	tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
 	lfsr	2, myArray
 	call	UART_Transmit_Message
 
-;	call	LCD_SetCursor_SecondLine
-;	movlw	0x05
-;	call	LCD_delay_ms
 	movlw	myTable_l	; output message to LCD
 	addlw	0xff		; don't send the final carriage return to LCD
 	lfsr	2, myArray
 	call	LCD_Write_Message
-;	clrf    LATB, A
+
 	goto	$		; goto current line in code
 
 	; a delay subroutine if you need one, times around loop in delay_count
