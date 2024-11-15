@@ -1,41 +1,92 @@
 #include <xc.inc>
     
-global  KeyPad_Setup, KeyPad_Transmit_Message
+global  KeyPad_Setup
 
 psect	udata_acs   ; reserve data space in access ram
-KeyPad_counter: ds    1	    ; reserve 1 byte for variable KeyPad_counter
+KeyPad_counter:	ds  1
+KeyPad_row:	ds  1
+KeyPad_column:	ds  1
+KeyPad_output:	ds  1
 
-psect	keypad_code,class=CODE
+psect	keypad_code, class=CODE
 KeyPad_Setup:
-    bsf	    PADCFG1, REPU, 1
-    clrf    LATE
-    movlw   0x0f
-    movwf   TRISE
+    bsf	    REPU, 1
+    clrf    LATE, A
+    clrf    KeyPad_counter
+    movlw   00001111B
+    movwf   TRISE, A
+    goto    Check_KeyPad_row
+
+KeyPad_Setup_column:
+    bsf	    REPU, 1
+    clrf    LATE, A
+    clrf    KeyPad_counter
+    movlw   11110000B
+    movwf   TRISE, A
+    return
+
+Check_KeyPad_row:
+    movlw   00001111B
+    cpfseq  PORTE, A
+    bra	Check_KeyPad_row
+
+KeyPad_read:
+    movlw   0x00
+    btfss   PORTE, 0, A
+    movwf   KeyPad_row
+    btfss   PORTE, 0, A
+    incf    KeyPad_counter
+    movlw   0x01
+    btfss   PORTE, 1, A
+    movwf   KeyPad_row
+    btfss   PORTE, 1, A
+    incf    KeyPad_counter
+    movlw   0x02
+    btfss   PORTE, 2, A
+    movwf   KeyPad_row
+    btfss   PORTE, 2, A
+    incf    KeyPad_counter
+    movlw   0x03
+    btfss   PORTE, 3, A
+    movwf   KeyPad_row
+    btfss   PORTE, 3, A
+    incf    KeyPad_counter
+    ; write errror message from counter
+    call    KeyPad_Setup_column
+    movlw   0x00
+    btfss   PORTE, 4, A
+    movwf   KeyPad_row
+    btfss   PORTE, 4, A
+    incf    KeyPad_counter
+    movlw   0x01
+    btfss   PORTE, 5, A
+    movwf   KeyPad_row
+    btfss   PORTE, 5, A
+    incf    KeyPad_counter
+    movlw   0x02
+    btfss   PORTE, 6, A
+    movwf   KeyPad_row
+    btfss   PORTE, 6, A
+    incf    KeyPad_counter
+    movlw   0x03
+    btfss   PORTE, 7, A
+    movwf   KeyPad_row
+    btfss   PORTE, 7, A
+    incf    KeyPad_counter
+    movf    KeyPad_row
+    ; write errror message from counter
     
-;    bsf	    SPEN	; enable
-;    bcf	    SYNC	; synchronous
-;    bcf	    BRGH	; slow speed
-;    bsf	    TXEN	; enable transmit
-;    bcf	    BRG16	; 8-bit generator only
-;    movlw   103		; gives 9600 Baud rate (actually 9615)
-;    movwf   SPBRG1, A	; set baud rate
-;    bsf	    TRISC, PORTC_TX1_POSN, A	; TX1 pin is output on RC6 pin
-;					; must set TRISC6 to 1
-    return
+Analysis:
+    movlw   0x00
+    cpfseq   KeyPad_row
+    bra	Row1
+    movlw   0x00
+    cpfseq  KeyPad_column
+    bra	Column1
+    mov
+    
+    
+    
 
-KeyPad_Transmit_Message:	    ; Message stored at FSR2, length stored in W
-    movwf   KeyPad_counter, A
-KeyPad_Loop_message:
-    movf    POSTINC2, W, A
-    call    KeyPad_Transmit_Byte
-    decfsz  KeyPad_counter, A
-    bra	    KeyPad_Loop_message
-    return
-
-KeyPad_Transmit_Byte:	    ; Transmits byte stored in W
-    btfss   TX1IF	    ; TX1IF is set when TXREG1 is empty
-    bra	    KeyPad_Transmit_Byte
-    movwf   TXREG1, A
-    return
 
 
