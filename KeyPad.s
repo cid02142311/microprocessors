@@ -79,7 +79,6 @@ KeyPad_read:
 KeyPad_Analysis:
     ; Check which row is active
     movf    KeyPad_row, W   ; Load KeyPad_row into WREG
-
     ; If Row 1 (RE4 is active)
     movlw   0x00
     cpfseq  WREG
@@ -88,16 +87,16 @@ KeyPad_Analysis:
     movf    KeyPad_column, W
     movlw   0x00            ; Column 1 (RE0)
     cpfseq  WREG
-    movlw   '1'             ; Key '1'
+    retlw   '1'             ; Key '1'
     movlw   0x01            ; Column 2 (RE1)
     cpfseq  WREG
-    movlw   '2'             ; Key '2'
+    retlw   '2'             ; Key '2'
     movlw   0x02            ; Column 3 (RE2)
     cpfseq  WREG
-    movlw   '3'             ; Key '3'
+    retlw   '3'             ; Key '3'
     movlw   0x03            ; Column 4 (RE3)
     cpfseq  WREG
-    movlw   'F'             ; Key 'F'
+    retlw   'F'             ; Key 'F'
     goto    End_KeyAnalysis
 
 Check_Row2:
@@ -109,16 +108,16 @@ Check_Row2:
     movf    KeyPad_column, W
     movlw   0x00            ; Column 1 (RE0)
     cpfseq  WREG
-    movlw   '4'             ; Key '4'
+    retlw   '4'             ; Key '4'
     movlw   0x01            ; Column 2 (RE1)
     cpfseq  WREG
-    movlw   '5'             ; Key '5'
+    retlw   '5'             ; Key '5'
     movlw   0x02            ; Column 3 (RE2)
     cpfseq  WREG
-    movlw   '6'             ; Key '6'
+    retlw   '6'             ; Key '6'
     movlw   0x03            ; Column 4 (RE3)
     cpfseq  WREG
-    movlw   'E'             ; Key 'E'
+    retlw   'E'             ; Key 'E'
     goto    End_KeyAnalysis
 
 Check_Row3:
@@ -130,16 +129,16 @@ Check_Row3:
     movf    KeyPad_column, W
     movlw   0x00            ; Column 1 (RE0)
     cpfseq  WREG
-    movlw   '7'             ; Key '7'
+    retlw   '7'             ; Key '7'
     movlw   0x01            ; Column 2 (RE1)
     cpfseq  WREG
-    movlw   '8'             ; Key '8'
+    retlw   '8'             ; Key '8'
     movlw   0x02            ; Column 3 (RE2)
     cpfseq  WREG
-    movlw   '9'             ; Key '9'
+    retlw   '9'             ; Key '9'
     movlw   0x03            ; Column 4 (RE3)
     cpfseq  WREG
-    movlw   'D'             ; Key 'D'
+    retlw   'D'             ; Key 'D'
     goto    End_KeyAnalysis
 
 Check_Row4:
@@ -151,16 +150,16 @@ Check_Row4:
     movf    KeyPad_column, W
     movlw   0x00            ; Column 1 (RE0)
     cpfseq  WREG
-    movlw   'A'             ; Key 'A'
+    retlw   'A'             ; Key 'A'
     movlw   0x01            ; Column 2 (RE1)
     cpfseq  WREG
-    movlw   '0'             ; Key '0'
+    retlw   '0'             ; Key '0'
     movlw   0x02            ; Column 3 (RE2)
     cpfseq  WREG
-    movlw   'B'             ; Key 'B'
+    retlw   'B'             ; Key 'B'
     movlw   0x03            ; Column 4 (RE3)
     cpfseq  WREG
-    movlw   'C'             ; Key 'C'
+    retlw   'C'             ; Key 'C'
     goto    End_KeyAnalysis
 
 No_KeyDetected:
@@ -168,10 +167,4 @@ No_KeyDetected:
 
 End_KeyAnalysis:
     movwf   KeyPad_output   ; Store the result in KeyPad_output
-    return
-    
-    
-    
-
-
-
+    goto    KeyPad_Setup
