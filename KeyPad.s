@@ -76,14 +76,99 @@ KeyPad_read:
     movf    KeyPad_row
     ; write errror message from counter
     
-# Analysis:
-#     movlw   0x00
-#     cpfseq   KeyPad_row
-#     bra	Row1
-#     movlw   0x00
-#     cpfseq  KeyPad_column
-#     bra	Column1
-#     mov
+KeyPad_Analysis:
+    ; Check which row is active
+    movf    KeyPad_row, W   ; Load KeyPad_row into WREG
+
+    ; If Row 1 (RE4 is active)
+    movlw   0x00
+    cpfseq  WREG
+    bra     Check_Row2
+    ; Now determine the key in Row 1 based on column
+    movf    KeyPad_column, W
+    movlw   0x00            ; Column 1 (RE0)
+    cpfseq  WREG
+    movlw   '1'             ; Key '1'
+    movlw   0x01            ; Column 2 (RE1)
+    cpfseq  WREG
+    movlw   '2'             ; Key '2'
+    movlw   0x02            ; Column 3 (RE2)
+    cpfseq  WREG
+    movlw   '3'             ; Key '3'
+    movlw   0x03            ; Column 4 (RE3)
+    cpfseq  WREG
+    movlw   'F'             ; Key 'F'
+    goto    End_KeyAnalysis
+
+Check_Row2:
+    ; If Row 2 (RE5 is active)
+    movlw   0x01
+    cpfseq  KeyPad_row
+    bra     Check_Row3
+    ; Now determine the key in Row 2 based on column
+    movf    KeyPad_column, W
+    movlw   0x00            ; Column 1 (RE0)
+    cpfseq  WREG
+    movlw   '4'             ; Key '4'
+    movlw   0x01            ; Column 2 (RE1)
+    cpfseq  WREG
+    movlw   '5'             ; Key '5'
+    movlw   0x02            ; Column 3 (RE2)
+    cpfseq  WREG
+    movlw   '6'             ; Key '6'
+    movlw   0x03            ; Column 4 (RE3)
+    cpfseq  WREG
+    movlw   'E'             ; Key 'E'
+    goto    End_KeyAnalysis
+
+Check_Row3:
+    ; If Row 3 (RE6 is active)
+    movlw   0x02
+    cpfseq  KeyPad_row
+    bra     Check_Row4
+    ; Now determine the key in Row 3 based on column
+    movf    KeyPad_column, W
+    movlw   0x00            ; Column 1 (RE0)
+    cpfseq  WREG
+    movlw   '7'             ; Key '7'
+    movlw   0x01            ; Column 2 (RE1)
+    cpfseq  WREG
+    movlw   '8'             ; Key '8'
+    movlw   0x02            ; Column 3 (RE2)
+    cpfseq  WREG
+    movlw   '9'             ; Key '9'
+    movlw   0x03            ; Column 4 (RE3)
+    cpfseq  WREG
+    movlw   'D'             ; Key 'D'
+    goto    End_KeyAnalysis
+
+Check_Row4:
+    ; If Row 4 (RE7 is active)
+    movlw   0x03
+    cpfseq  KeyPad_row
+    bra     No_KeyDetected
+    ; Now determine the key in Row 4 based on column
+    movf    KeyPad_column, W
+    movlw   0x00            ; Column 1 (RE0)
+    cpfseq  WREG
+    movlw   'A'             ; Key 'A'
+    movlw   0x01            ; Column 2 (RE1)
+    cpfseq  WREG
+    movlw   '0'             ; Key '0'
+    movlw   0x02            ; Column 3 (RE2)
+    cpfseq  WREG
+    movlw   'B'             ; Key 'B'
+    movlw   0x03            ; Column 4 (RE3)
+    cpfseq  WREG
+    movlw   'C'             ; Key 'C'
+    goto    End_KeyAnalysis
+
+No_KeyDetected:
+    clrf    KeyPad_output   ; No key detected, set KeyPad_output to 0
+
+End_KeyAnalysis:
+    movwf   KeyPad_output   ; Store the result in KeyPad_output
+    return
     
     
     
