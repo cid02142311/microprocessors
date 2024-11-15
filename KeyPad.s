@@ -15,9 +15,9 @@ KeyPad_Setup:
     clrf    KeyPad_counter
     movlw   00001111B
     movwf   TRISE, A
-    goto    Check_KeyPad_row
+    goto    Check_KeyPad_column
 
-KeyPad_Setup_column:
+KeyPad_Setup_row:
     bsf	    REPU, 1
     clrf    LATE, A
     clrf    KeyPad_counter
@@ -25,34 +25,34 @@ KeyPad_Setup_column:
     movwf   TRISE, A
     return
 
-Check_KeyPad_row:
+Check_KeyPad_column:
     movlw   00001111B
     cpfseq  PORTE, A
-    bra	Check_KeyPad_row
+    bra	Check_KeyPad_column
 
 KeyPad_read:
     movlw   0x00
     btfss   PORTE, 0, A
-    movwf   KeyPad_row
+    movwf   KeyPad_column
     btfss   PORTE, 0, A
     incf    KeyPad_counter
     movlw   0x01
     btfss   PORTE, 1, A
-    movwf   KeyPad_row
+    movwf   KeyPad_column
     btfss   PORTE, 1, A
     incf    KeyPad_counter
     movlw   0x02
     btfss   PORTE, 2, A
-    movwf   KeyPad_row
+    movwf   KeyPad_column
     btfss   PORTE, 2, A
     incf    KeyPad_counter
     movlw   0x03
     btfss   PORTE, 3, A
-    movwf   KeyPad_row
+    movwf   KeyPad_column
     btfss   PORTE, 3, A
     incf    KeyPad_counter
     ; write errror message from counter
-    call    KeyPad_Setup_column
+    call    KeyPad_Setup_row
     movlw   0x00
     btfss   PORTE, 4, A
     movwf   KeyPad_row
@@ -76,14 +76,14 @@ KeyPad_read:
     movf    KeyPad_row
     ; write errror message from counter
     
-Analysis:
-    movlw   0x00
-    cpfseq   KeyPad_row
-    bra	Row1
-    movlw   0x00
-    cpfseq  KeyPad_column
-    bra	Column1
-    mov
+# Analysis:
+#     movlw   0x00
+#     cpfseq   KeyPad_row
+#     bra	Row1
+#     movlw   0x00
+#     cpfseq  KeyPad_column
+#     bra	Column1
+#     mov
     
     
     
