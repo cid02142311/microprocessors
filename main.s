@@ -15,9 +15,9 @@ myArray:    ds 0x80 ; reserve 128 bytes for message data
 psect	data    
 	; ******* myTable, data in programme memory, and its length *****
 myTable:
-	db	'!',0x0a
+	db	'N','o','n','e',0x0a
 					; message, plus carriage return
-	myTable_l   EQU	2	; length of data
+	myTable_l   EQU	5	; length of data
 	align	2
 
 psect	code, abs
@@ -28,10 +28,10 @@ main:
 
 ; ******* Programme FLASH read Setup Code ***********************
 setup:	
-;    bcf	    CFGS	; point to Flash program memory  
-;    bsf	    EEPGD 	; access Flash program memory
-;    call    UART_Setup	; setup UART
-;    call    LCD_Setup	; setup UART
+    bcf	    CFGS	; point to Flash program memory  
+    bsf	    EEPGD 	; access Flash program memory
+    call    UART_Setup	; setup UART
+    call    LCD_Setup	; setup UART
     goto    start
 
 ; ******* Main programme ****************************************
