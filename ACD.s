@@ -1,10 +1,11 @@
 #include <xc.inc>
 
-global  ADC_Setup, ADC_Read    
+global  ADC_Setup, ADC_Read
+global	OUT3, OUT2, OUT1, OUT0
 
 psect	udata_acs
+ARG1U:	ds  1
 ARG1H:	ds  1
-ARG1M:	ds  1
 ARG1L:	ds  1
 ARG2H:	ds  1
 ARG2L:	ds  1
@@ -79,22 +80,49 @@ ADC_Read:
     CLRF    WREG, A	;
     ADDWFC  RES3, F, A	;
 
-    MOVF    RES3, A
-    ADDWF   0x30
-    MOVWF   OUT3, A
+    MOVLW   0X30
+    ADDWF   RES3, A
+    MOVFF   RES3, OUT3, A
     
     ;Step 2
-    MOVFF   RES2, ARG1H
-    MOVFF   RES1, ARG1M
+    MOVFF   RES2, ARG1U
+    MOVFF   RES1, ARG1H
     MOVFF   RES0, ARG1L
     MOVLW   0x0a
-    MOVWF   ARG2L
-
+    MOVWF   ARG2L, A
     ; Multiply the ADC result (8-bit) by the 24-bit constant
     CALL    MULTIPLY_8_24    ; Call multiplication routine
 
-    ; The result of the multiplication is in RES3 (most significant byte)
-    ; RES2, RES1, RES0 (least significant byte)
+    MOVLW   0X30
+    ADDWF   RES3, A
+    MOVFF   RES3, OUT2, A
+
+    ;Step 3
+    MOVFF   RES2, ARG1U
+    MOVFF   RES1, ARG1H
+    MOVFF   RES0, ARG1L
+    MOVLW   0x0a
+    MOVWF   ARG2L, A
+    ; Multiply the ADC result (8-bit) by the 24-bit constant
+    CALL    MULTIPLY_8_24    ; Call multiplication routine
+
+    MOVLW   0X30
+    ADDWF   RES3, A
+    MOVFF   RES3, OUT1, A
+
+    ;Step 4
+    MOVFF   RES2, ARG1U
+    MOVFF   RES1, ARG1H
+    MOVFF   RES0, ARG1L
+    MOVLW   0x0a
+    MOVWF   ARG2L, A
+    ; Multiply the ADC result (8-bit) by the 24-bit constant
+    CALL    MULTIPLY_8_24    ; Call multiplication routine
+
+    MOVLW   0X30
+    ADDWF   RES3, A
+    MOVFF   RES3, OUT0, A
+
 
 adc_loop:
     btfsc   GO		; check to see if finished
@@ -105,28 +133,26 @@ adc_loop:
 ; Multiply ARG1L (8-bit) by ARG2L, ARG2H, and ARG2U (24-bit)
 MULTIPLY_8_24:
     ; Multiply ARG2L (8-bit) by ARG1L (low byte of 24-bit number)
-    MOVF    ARG2L, W         ; Load ARG2L (8-bit number) into W
-    MULWF   ARG1L            ; Multiply by ARG1L (low byte of the 24-bit constant)
-    MOVFF   PRODH, RES1      ; Store the high byte of the result in RES1
-    MOVFF   PRODL, RES0      ; Store the low byte of the result in RES0
-
-    ; Multiply ARG2L (8-bit) by ARG1H (middle byte of 24-bit constant)
-    MOVF    ARG2L, W         ; Load ARG2L into W
-    MULWF   ARG1H            ; Multiply by ARG1H (middle byte of 24-bit constant)
-    MOVFF   PRODH, RES2      ; Store the high byte of the result in RES2
-    MOVFF   PRODL, TEMP      ; Store low byte temporarily in TEMP
-    ADDWF   RES1, F          ; Add the result to RES1
-    MOVF    TEMP, W          ; Get the carry from the lower part
-    ADDWFC  RES2, F          ; Add carry to RES2
+    MOVF    ARG2L, W, A	    ; Load ARG2L (8-bit number) into W
+    MULWF   ARG1L, A	    ; Multiply by ARG1L (low byte of the 24-bit number)
+    MOVFF   PRODH, RES1	    ; Store the high byte of the result in RES1
+    MOVFF   PRODL, RES0	    ; Store the low byte of the result in RES0
 
     ; Multiply ARG2L (8-bit) by ARG1U (upper byte of 24-bit constant)
-    MOVF    ARG2L, W         ; Load ARG2L into W
-    MULWF   ARG1U            ; Multiply by ARG1U (upper byte of 24-bit constant)
-    MOVFF   PRODH, RES3      ; Store high byte of result in RES3
-    MOVFF   PRODL, TEMP      ; Store low byte temporarily in TEMP
-    ADDWF   RES2, F          ; Add the result to RES2
-    MOVF    TEMP, W          ; Get the carry from the lower part
-    ADDWFC  RES3, F          ; Add carry to RES3
+    MOVF    ARG2L, W, A	    ; Load ARG2L into W
+    MULWF   ARG1U, A	    ; Multiply by ARG1U (upper byte of 24-bit number)
+    MOVFF   PRODH, RES3	    ; Store high byte of result in RES3
+    MOVFF   PRODL, RES2	    ; Store low byte temporarily in TEMP
+
+    ; Multiply ARG2L (8-bit) by ARG1H (middle byte of 24-bit constant)
+    MOVF    ARG2L, W, A	    ; Load ARG2L into W
+    MULWF   ARG1H, A	    ; Multiply by ARG1H (middle byte of 24-bit number)
+    MOVF    PRODL, W, A	;
+    ADDWF   RES1, F, A	; Add cross
+    MOVF    PRODH, W, A	; products
+    ADDWFC  RES2, F, A	;
+    CLRF    WREG, A	;
+    ADDWFC  RES3, F, A	;
 
     return
 

@@ -3,6 +3,7 @@
 extrn	UART_Setup, UART_Transmit_Message  ; external uart subroutines
 extrn	LCD_Setup, LCD_Write_Message, LCD_Write_Hex ; external LCD subroutines
 extrn	ADC_Setup, ADC_Read		   ; external ADC subroutines
+extrn	OUT3, OUT2, OUT1, OUT0
 	
 psect	udata_acs   ; reserve data space in access ram
 counter:    ds 1    ; reserve one byte for a counter variable
@@ -57,10 +58,18 @@ loop: 	tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
 	
 measure_loop:
 	call	ADC_Read
-	movf	ADRESH, W, A
-	call	LCD_Write_Hex
-	movf	ADRESL, W, A
-	call	LCD_Write_Hex
+;	movf	ADRESH, W, A
+;	call	LCD_Write_Hex
+;	movf	ADRESL, W, A
+;	call	LCD_Write_Hex
+	lfsr	0, myArray
+	movff	OUT3, POSTINC0
+	movff	OUT2, POSTINC0
+	movff	OUT1, POSTINC0
+	movff	OUT0, POSTINC0
+	lfsr	2, myArray
+	movlw	4
+	call	LCD_Write_Message
 	goto	measure_loop		; goto current line in code
 	
 	; a delay subroutine if you need one, times around loop in delay_count
