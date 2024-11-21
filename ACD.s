@@ -104,29 +104,29 @@ adc_loop:
 ; Multiply 8-bit by 24-bit
 ; Multiply ARG1L (8-bit) by ARG2L, ARG2H, and ARG2U (24-bit)
 MULTIPLY_8_24:
-    ; Multiply ARG1L (8-bit) by ARG2L (low byte of 24-bit number)
-    MOVF    ARG1L, W       ; Load ARG1L (ADC result low byte) into WREG
-    MULWF   ARG2L          ; Multiply by ARG2L (low byte of constant)
-    MOVFF   PRODH, RES1    ; Store the high byte of result in RES1
-    MOVFF   PRODL, RES0    ; Store the low byte of result in RES0
+    ; Multiply ARG2L (8-bit) by ARG1L (low byte of 24-bit number)
+    MOVF    ARG2L, W         ; Load ARG2L (8-bit number) into W
+    MULWF   ARG1L            ; Multiply by ARG1L (low byte of the 24-bit constant)
+    MOVFF   PRODH, RES1      ; Store the high byte of the result in RES1
+    MOVFF   PRODL, RES0      ; Store the low byte of the result in RES0
 
-    ; Multiply ARG1L (8-bit) by ARG2H (middle byte of 24-bit number)
-    MOVF    ARG1L, W       ; Load ARG1L again into W
-    MULWF   ARG2H          ; Multiply by ARG2H (middle byte of constant)
-    MOVFF   PRODH, RES2    ; Store high byte of result in RES2
-    MOVFF   PRODL, TEMP    ; Store low byte temporarily in TEMP
-    ADDWF   RES1, F        ; Add to RES1 (previous high byte)
-    MOVF    TEMP, W        ; Get the carry from the lower part
-    ADDWFC  RES2, F        ; Add carry to RES2 (final result)
+    ; Multiply ARG2L (8-bit) by ARG1H (middle byte of 24-bit constant)
+    MOVF    ARG2L, W         ; Load ARG2L into W
+    MULWF   ARG1H            ; Multiply by ARG1H (middle byte of 24-bit constant)
+    MOVFF   PRODH, RES2      ; Store the high byte of the result in RES2
+    MOVFF   PRODL, TEMP      ; Store low byte temporarily in TEMP
+    ADDWF   RES1, F          ; Add the result to RES1
+    MOVF    TEMP, W          ; Get the carry from the lower part
+    ADDWFC  RES2, F          ; Add carry to RES2
 
-    ; Multiply ARG1L (8-bit) by ARG2U (upper byte of 24-bit number)
-    MOVF    ARG1L, W       ; Load ARG1L again into W
-    MULWF   ARG2U          ; Multiply by ARG2U (upper byte of constant)
-    MOVFF   PRODH, RES3    ; Store high byte of result in RES3
-    MOVFF   PRODL, TEMP    ; Store low byte temporarily in TEMP
-    ADDWF   RES2, F        ; Add to RES2 (previous result)
-    MOVF    TEMP, W        ; Get the carry from the lower part
-    ADDWFC  RES3, F        ; Add carry to RES3 (final result)
+    ; Multiply ARG2L (8-bit) by ARG1U (upper byte of 24-bit constant)
+    MOVF    ARG2L, W         ; Load ARG2L into W
+    MULWF   ARG1U            ; Multiply by ARG1U (upper byte of 24-bit constant)
+    MOVFF   PRODH, RES3      ; Store high byte of result in RES3
+    MOVFF   PRODL, TEMP      ; Store low byte temporarily in TEMP
+    ADDWF   RES2, F          ; Add the result to RES2
+    MOVF    TEMP, W          ; Get the carry from the lower part
+    ADDWFC  RES3, F          ; Add carry to RES3
 
     return
 
