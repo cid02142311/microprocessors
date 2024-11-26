@@ -3,7 +3,6 @@
 extrn	UART_Setup, UART_Transmit_Message  ; external subroutines
 extrn	LCD_Setup, LCD_Write_Message
 extrn	KeyPad_Setup, KeyPad_Read
-extrn	KeyPad_output
 
 psect	udata_acs   ; reserve data space in access ram
 counter:	ds  1    ; reserve one byte for a counter variable
