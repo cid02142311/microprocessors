@@ -19,10 +19,10 @@
                    projectFiles="true">
       <itemPath>main.s</itemPath>
       <itemPath>config.s</itemPath>
-      <itemPath>ADC.s</itemPath>
       <itemPath>KeyPad.s</itemPath>
       <itemPath>LCD.s</itemPath>
       <itemPath>UART.s</itemPath>
+      <itemPath>ADC.s</itemPath>
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>

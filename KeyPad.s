@@ -1,12 +1,10 @@
 #include <xc.inc>
     
 global  KeyPad_Setup, KeyPad_Read
-global	KeyPad_output
 
 psect	udata_acs   ; reserve data space in access ram
 KeyPad_row:	ds  1
 KeyPad_column:	ds  1
-KeyPad_output:	ds  1
 delay_count:	ds  1
 KeyPad_counter:	ds  1
 
@@ -43,7 +41,6 @@ KeyPad_Setup_row:
     return
 
 KeyPad_Read:
-    clrf    KeyPad_output, A
     clrf    KeyPad_row, A
     clrf    KeyPad_column, A
     clrf    KeyPad_counter, A
@@ -226,5 +223,6 @@ retc:
 
 
 No_KeyDetected:
-    clrf    KeyPad_output, A   ; No key detected, set KeyPad_output to 0
     goto    KeyPad_Read
+
+end

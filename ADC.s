@@ -20,13 +20,13 @@ OUT0:	ds  1
 
 psect	adc_code, class=CODE
 
-; ADC Setup - Configuring the ADC for AN0 (RA0) input
+; ADC Setup - Configuring the ADC for AN3 (RA3) input
 ADC_Setup:
-    bsf	    TRISA, PORTA_RA0_POSN, A  ; pin RA0==AN0 input
+    bsf	    TRISA, PORTA_RA3_POSN, A  ; pin RA3==AN3 input
     movlb   0x0f
-    bsf	    ANSEL0	; set AN0 to analog
+    bsf	    ANSEL3	; set AN3 to analog
     movlb   0x00
-    movlw   0x01	; select AN0 for measurement
+    movlw   1101B	; select AN3 for measurement
     movwf   ADCON0, A	; and turn ADC on
     movlw   0x30	; Select 4.096V positive reference
     movwf   ADCON1, A   ; 0V for -ve reference and -ve input
@@ -34,7 +34,7 @@ ADC_Setup:
     movwf   ADCON2, A   ; Fosc/64 clock and acquisition times
     return
 
-; ADC Read - Read the ADC value from AN0 (RA0)
+; ADC Read - Read the ADC value from AN3 (RA3)
 ADC_Read:
     bsf	    GO		; Start conversion by setting GO bit in ADCON0
 
