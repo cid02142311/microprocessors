@@ -1,70 +1,80 @@
-	#include <xc.inc>
+#include <xc.inc>
 
-psect	code, abs
+extrn	UART_Setup, UART_Transmit_Message  ; external uart subroutines
+extrn	LCD_Setup, LCD_Write_Message, LCD_Write_Hex ; external LCD subroutines
+extrn	ADC_Setup, ADC_Read		   ; external ADC subroutines
+extrn	OUT3, OUT2, OUT1, OUT0
+	
+psect	udata_acs   ; reserve data space in access ram
+counter:    ds 1    ; reserve one byte for a counter variable
+delay_count:ds 1    ; reserve one byte for counter in the delay routine
+    
+psect	udata_bank4 ; reserve data anywhere in RAM (here at 0x400)
+myArray:    ds 0x80 ; reserve 128 bytes for message data
 
-main:
-	org	0x0
+psect	data    
+	; ******* myTable, data in programme memory, and its length *****
+myTable:
+	db	'H','e','l','l','o',' ','W','o','r','l','d','!',0x0a
+					; message, plus carriage return
+	myTable_l   EQU	13	; length of data
+	align	2
+    
+psect	code, abs	
+rst: 	org 0x0
+ 	goto	setup
+
+	; ******* Programme FLASH read Setup Code ***********************
+setup:	bcf	CFGS	; point to Flash program memory  
+	bsf	EEPGD 	; access Flash program memory
+	call	UART_Setup	; setup UART
+	call	LCD_Setup	; setup UART
+	call	ADC_Setup	; setup ADC
 	goto	start
+	
+	; ******* Main programme ****************************************
+start: 	lfsr	0, myArray	; Load FSR0 with address in RAM	
+	movlw	low highword(myTable)	; address of data in PM
+	movwf	TBLPTRU, A		; load upper bits to TBLPTRU
+	movlw	high(myTable)	; address of data in PM
+	movwf	TBLPTRH, A		; load high byte to TBLPTRH
+	movlw	low(myTable)	; address of data in PM
+	movwf	TBLPTRL, A		; load low byte to TBLPTRL
+	movlw	myTable_l	; bytes to read
+	movwf 	counter, A		; our counter register
+loop: 	tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
+	movff	TABLAT, POSTINC0; move data from TABLAT to (FSR0), inc FSR0	
+	decfsz	counter, A		; count down to zero
+	bra	loop		; keep going until finished
+		
+	movlw	myTable_l	; output message to UART
+	lfsr	2, myArray
+	call	UART_Transmit_Message
 
-	org	0x100		    ; Main code starts here at address 0x100
-start:
-	movlw 	0x0
-	movwf	TRISC, A	    ; Port C all outputs
-	movlw	0x00
-	movwf	0x06, A
-	call	check
-	bra 	test
-check:
-	movlw	0x00
-	btfsc	PORTD, 0
-	addlw	0x01
-	btfsc	PORTD, 1
-	addlw	0x02
-	btfsc	PORTD, 2
-	addlw	0x04
-	btfsc	PORTD, 3
-	addlw	0x08
-	btfsc	PORTD, 4
-	addlw	0x10
-	btfsc	PORTD, 5
-	addlw	0x20
-	btfsc	PORTD, 6
-	addlw	0x40
-	btfsc	PORTD, 7
-	addlw	0x80
-	movwf	0x00
-	return
-delay:
-	movlw	0xff
-	movwf	0x21, A
-	call	delay1
-	decfsz	0x20, A
+	movlw	myTable_l-1	; output message to LCD
+				; don't send the final carriage return to LCD
+	lfsr	2, myArray
+	call	LCD_Write_Message
+	
+measure_loop:
+	call	ADC_Read
+;	movf	ADRESH, W, A
+;	call	LCD_Write_Hex
+;	movf	ADRESL, W, A
+;	call	LCD_Write_Hex
+	lfsr	0, myArray
+	movff	OUT3, POSTINC0
+	movff	OUT2, POSTINC0
+	movff	OUT1, POSTINC0
+	movff	OUT0, POSTINC0
+	lfsr	2, myArray
+	movlw	4
+	call	LCD_Write_Message
+	goto	measure_loop		; goto current line in code
+	
+	; a delay subroutine if you need one, times around loop in delay_count
+delay:	decfsz	delay_count, A	; decrement until zero
 	bra	delay
 	return
-delay1:
-	movlw	0x0f
-	movwf	0x22, A
-	call	delay2
-	decfsz	0x21, A
-	bra	delay1
-	return
-delay2:
-	decfsz	0x22, A
-	bra	delay2
-	return
-stop:
-	goto	stop
-loop:
-	movff 	0x06, PORTC
-	incf 	0x06, A
-	movlw	0xff
-	movwf	0x20, A
-	call	delay
-test:
-;	movlw	0x63
-	movf 	0x00, W
-	cpfsgt 	0x06, A
-	bra 	loop		    ; Not yet finished goto start of loop again
-;	goto 	0x0		    ; Re-run program from start
-	goto	stop
-	end	main
+
+	end	rst
