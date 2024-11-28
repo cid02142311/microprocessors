@@ -1,6 +1,7 @@
 #include <xc.inc>
 
-global  LCD_Setup, LCD_Write_Message, LCD_Write_Hex
+global  LCD_Setup, LCD_Write_Message, LCD_FirstLine, LCD_SecondLine
+
 
 psect	udata_acs   ; named variables in access ram
 LCD_cnt_l:	ds 1	; reserve 1 byte for variable LCD_cnt_l
@@ -11,12 +12,11 @@ LCD_counter:	ds 1	; reserve 1 byte for counting through nessage
 
 PSECT	udata_acs_ovr,space=1,ovrld,class=COMRAM
 LCD_hex_tmp:	ds 1    ; reserve 1 byte for variable LCD_hex_tmp
+    LCD_E   EQU 5	; LCD enable bit
+    LCD_RS  EQU 4	; LCD register select bit
 
-	LCD_E	EQU 5	; LCD enable bit
-    	LCD_RS	EQU 4	; LCD register select bit
 
 psect	lcd_code,class=CODE
-    
 LCD_Setup:
 	clrf    LATB, A
 	movlw   11000000B	    ; RB0:5 all outputs
@@ -49,22 +49,20 @@ LCD_Setup:
 	call	LCD_delay_x4us
 	return
 
-LCD_Write_Hex:			; Writes byte stored in W as hex
-	movwf	LCD_hex_tmp, A
-	swapf	LCD_hex_tmp, W, A	; high nibble first
-	call	LCD_Hex_Nib
-	movf	LCD_hex_tmp, W, A	; then low nibble
-LCD_Hex_Nib:			; writes low nibble as hex character
-	andlw	0x0F
-	movwf	LCD_tmp, A
-	movlw	0x0A
-	cpfslt	LCD_tmp, A
-	addlw	0x07		; number is greater than 9 
-	addlw	0x26
-	addwf	LCD_tmp, W, A
-	call	LCD_Send_Byte_D ; write out ascii
-	return	
-	
+LCD_FirstLine:
+    movlw   0x80
+    call    LCD_Send_Byte_I
+    movlw   10
+    call    LCD_delay_x4us
+    return
+
+LCD_SecondLine:
+    movlw   0xc0
+    call    LCD_Send_Byte_I
+    movlw   10
+    call    LCD_delay_x4us
+    return
+
 LCD_Write_Message:	    ; Message stored at FSR2, length stored in W
 	movwf   LCD_counter, A
 LCD_Loop_message:
@@ -123,7 +121,8 @@ LCD_Enable:	    ; pulse enable bit LCD_E for 500ns
 	nop
 	bcf	LATB, LCD_E, A	    ; Writes data to LCD
 	return
-    
+
+
 ; ** a few delay routines below here as LCD timing can be quite critical ****
 LCD_delay_ms:		    ; delay given in ms in W
 	movwf	LCD_cnt_ms, A
@@ -150,6 +149,5 @@ lcdlp1:	decf 	LCD_cnt_l, F, A	; no carry when 0x00 -> 0xff
 	subwfb 	LCD_cnt_h, F, A	; no carry when 0x00 -> 0xff
 	bc 	lcdlp1		; carry, then loop again
 	return			; carry reset so return
-
 
 end

@@ -1,10 +1,14 @@
 #include <xc.inc>
 
-extrn	UART_Setup, UART_Transmit_Message	    ; external UART subroutines
-extrn	LCD_Setup, LCD_Write_Message, LCD_Write_Hex ; external LCD subroutines
-extrn	ADC_Setup, ADC_Read			    ; external ADC subroutines
-extrn	KeyPad_Setup, KeyPad_Read		    ; external KeyPad subroutines
+extrn	UART_Setup, UART_Transmit_Message   ; external UART subroutines
+extrn	LCD_Setup, LCD_Write_Message, LCD_FirstLine, LCD_SecondLine
+					    ; external LCD subroutines
+extrn	ADC_Setup, ADC_Read		    ; external ADC subroutines
+extrn	KeyPad_Setup, KeyPad_Read	    ; external KeyPad subroutines
+extrn	KeyPad_Int_Hi
 extrn	OUT3, OUT2, OUT1, OUT0
+
+global	KeyPad_Int_Hi_Write
 
 
 psect	udata_acs   ; reserve data space in access ram
@@ -12,35 +16,47 @@ counter:	ds  1    ; reserve one byte for a counter variable
 delay_count:	ds  1    ; reserve one byte for counter in the delay routine
 delay_count_2:	ds  1
 delay_count_3:	ds  1
-myChar:		ds  1
+delay_count_4:	ds  1
 
 psect	udata_bank4 ; reserve data anywhere in RAM (here at 0x400)
 myArray:    ds 0x80 ; reserve 128 bytes for message data
 
 psect	data
 ; ******* myTable, data in programme memory, and its length *****
-myTable:
-	db	'H','e','l','l','o',' ','W','o','r','l','d','!',0x0a
-					; message, plus carriage return
-	myTable_l   EQU	13	; length of data
-	align	2
+Enter_Temp:
+    db	'E','n','t','e','r',' ','T','E','M','P',':',0x0a
+				; message, plus carriage return
+    Enter_Temp_l  EQU	12	; length of data
+    align	  2
+Current_Temp:
+    db	'C','u','r','r','e','n','t',' ','T','E','M','P',':',0x0a
+				; message, plus carriage return
+    Current_Temp_l  EQU	14	; length of data
+    align	    2
 
 
 psect	code, abs	
-main:
+rst:
     org	    0x0
     goto    setup
     org	    0x0008		; High-priority interrupts
     goto    H_interrupts
     org	    0x0018		; Low-priority interrupts
     goto    L_interrupts
-    org	    0x100
 
 H_interrupts:
-    
+    goto    KeyPad_Int_Hi
+KeyPad_Int_Hi_Write:
+    lfsr    0, myArray
+    movwf   POSTINC0, A
+    lfsr    2, myArray
+    movlw   1
+    call    LCD_Write_Message
+    call    delay1
+    return
 
 L_interrupts:
-    
+;    goto    
 
 ; ******* Programme FLASH read Setup Code ***********************
 setup:
@@ -54,45 +70,90 @@ setup:
 
 ; ******* Main programme ****************************************
 start:
-    lfsr    0, myArray		    ; Load FSR0 with address in RAM	
-    movlw   low highword(myTable)   ; address of data in PM
-    movwf   TBLPTRU, A		    ; load upper bits to TBLPTRU
-    movlw   high(myTable)	    ; address of data in PM
-    movwf   TBLPTRH, A		    ; load high byte to TBLPTRH
-    movlw   low(myTable)	    ; address of data in PM
-    movwf   TBLPTRL, A		    ; load low byte to TBLPTRL
-    movlw   myTable_l		    ; bytes to read
-    movwf   counter, A		    ; our counter register
-loop:
-    tblrd*+			    ; one byte from PM to TABLAT, increment TBLPRT
-    movff   TABLAT, POSTINC0	    ; move data from TABLAT to (FSR0), inc FSR0	
-    decfsz  counter, A		    ; count down to zero
-    bra	    loop		    ; keep going until finished
+    call    write_Enter_Temp
+    call    LCD_SecondLine
+;    goto    $
+    call    write_Current_Temp
+    goto    Current_Temp_loop
 
-    movlw   myTable_l		    ; output message to UART
-    lfsr    2, myArray
-    call    UART_Transmit_Message
 
-    movlw   myTable_l-1		    ; output message to LCD
-				    ; don't send the final carriage return to LCD
+write_Enter_Temp:
+    call    LCD_FirstLine
+    lfsr    0, myArray		; Load FSR0 with address in RAM	
+    movlw   low highword(Enter_Temp)   ; address of data in PM
+    movwf   TBLPTRU, A		; load upper bits to TBLPTRU
+    movlw   high(Enter_Temp)	; address of data in PM
+    movwf   TBLPTRH, A		; load high byte to TBLPTRH
+    movlw   low(Enter_Temp)	; address of data in PM
+    movwf   TBLPTRL, A		; load low byte to TBLPTRL
+    movlw   Enter_Temp_l	; bytes to read
+    movwf   counter, A		; our counter register
+enter_loop:
+    tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
+    movff   TABLAT, POSTINC0	; move data from TABLAT to (FSR0), inc FSR0	
+    decfsz  counter, A		; count down to zero
+    bra	    enter_loop		; keep going until finished
+
+    movlw   Enter_Temp_l-1	; output message to LCD
+				; don't send the final carriage return to LCD
     lfsr    2, myArray
     call    LCD_Write_Message
+    return
 
-measure_loop:
+write_Current_Temp:
+    call    LCD_FirstLine
+    lfsr    0, myArray		; Load FSR0 with address in RAM	
+    movlw   low highword(Current_Temp)   ; address of data in PM
+    movwf   TBLPTRU, A		; load upper bits to TBLPTRU
+    movlw   high(Current_Temp)	; address of data in PM
+    movwf   TBLPTRH, A		; load high byte to TBLPTRH
+    movlw   low(Current_Temp)	; address of data in PM
+    movwf   TBLPTRL, A		; load low byte to TBLPTRL
+    movlw   Current_Temp_l	; bytes to read
+    movwf   counter, A		; our counter register
+current_loop:
+    tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
+    movff   TABLAT, POSTINC0	; move data from TABLAT to (FSR0), inc FSR0	
+    decfsz  counter, A		; count down to zero
+    bra	    current_loop	; keep going until finished
+
+    movlw   Current_Temp_l-1	; output message to LCD
+				; don't send the final carriage return to LCD
+    lfsr    2, myArray
+    call    LCD_Write_Message
+    return
+
+Current_Temp_loop:
     call    ADC_Read
-;    movf    ADRESH, W, A
-;    call    LCD_Write_Hex
-;    movf    ADRESL, W, A
-;    call    LCD_Write_Hex
+    call    LCD_SecondLine
     lfsr    0, myArray
     movff   OUT3, POSTINC0
     movff   OUT2, POSTINC0
     movff   OUT1, POSTINC0
+    movlw   0x2e
+    movwf   POSTINC0, A
     movff   OUT0, POSTINC0
+    movlw   ' '
+    movwf   POSTINC0, A
+    movlw   'd'
+    movwf   POSTINC0, A
+    movlw   'e'
+    movwf   POSTINC0, A
+    movlw   'g'
+    movwf   POSTINC0, A
+    movlw   'r'
+    movwf   POSTINC0, A
+    movlw   'e'
+    movwf   POSTINC0, A
+    movlw   'e'
+    movwf   POSTINC0, A
+    movlw   's'
+    movwf   POSTINC0, A
     lfsr    2, myArray
-    movlw   4
+    movlw   13
     call    LCD_Write_Message
-    goto    measure_loop	    ; goto current line in code
+    goto    Current_Temp_loop	    ; goto current line in code
+
 
 ; some delay subroutines
 delay:
@@ -109,7 +170,7 @@ delay1:
     return
 
 delay2:
-    movlw   0x08
+    movlw   0xff
     movwf   delay_count_3, A
     call    delay3
     decfsz  delay_count_2, A	    ; decrement until zero
@@ -117,8 +178,16 @@ delay2:
     return
 
 delay3:
+    movlw   0xff
+    movwf   delay_count_4, A
+    call    delay4
     decfsz  delay_count_3, A
     bra	    delay3
     return
 
-end main
+delay4:
+    decfsz  delay_count_4, A
+    bra	    delay4
+    return
+
+end rst

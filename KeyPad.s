@@ -1,12 +1,17 @@
 #include <xc.inc>
-    
+
+extrn	KeyPad_Int_Hi_Write
+
 global  KeyPad_Setup, KeyPad_Read
+global	KeyPad_Int_Hi
+
 
 psect	udata_acs   ; reserve data space in access ram
 KeyPad_row:	ds  1
 KeyPad_column:	ds  1
 delay_count:	ds  1
 KeyPad_counter:	ds  1
+interrupt:	ds  1
 
 psect	keypad_code, class=CODE
 delay:
@@ -15,10 +20,26 @@ delay:
     return
 
 
+KeyPad_Int_Hi:
+    btfss   TMR0IF		; check that this is timer0 interrupt
+    retfie  f			; if not then return
+    call    KeyPad_Read
+    cpfseq  interrupt, A
+    call    KeyPad_Int_Hi_Write
+    bcf	    TMR0IF		; clear interrupt flag
+    retfie  f			; fast return from interrupt
+
+
 KeyPad_Setup:
     banksel PADCFG1
     bsf	    REPU
     clrf    LATE, A
+    movlw   0x00
+    movwf   interrupt, A
+    movlw   10000111B		; Set timer0 to 16-bit, Fosc/4/256
+    movwf   T0CON, A		; = 62.5KHz clock rate, approx 1sec rollover
+    bsf	    TMR0IE		; Enable timer0 interrupt
+    bsf	    GIE			; Enable all interrupts
     return
     
     
@@ -223,6 +244,6 @@ retc:
 
 
 No_KeyDetected:
-    goto    KeyPad_Read
+    retlw   0x00
 
 end
