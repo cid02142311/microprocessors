@@ -8,7 +8,7 @@ extrn	KeyPad_Setup, KeyPad_Read	    ; external KeyPad subroutines
 extrn	KeyPad_Int_Hi
 extrn	OUT3, OUT2, OUT1, OUT0
 
-global	KeyPad_Int_Hi_Write
+global	KeyPad_Int_Hi_Output
 
 
 psect	udata_acs   ; reserve data space in access ram
@@ -17,6 +17,8 @@ delay_count:	ds  1    ; reserve one byte for counter in the delay routine
 delay_count_2:	ds  1
 delay_count_3:	ds  1
 delay_count_4:	ds  1
+KeyPad_TEMP:	ds  1
+target_temp:	ds  4
 
 psect	udata_bank4 ; reserve data anywhere in RAM (here at 0x400)
 myArray:    ds 0x80 ; reserve 128 bytes for message data
@@ -46,17 +48,13 @@ rst:
 
 H_interrupts:
     goto    KeyPad_Int_Hi
-KeyPad_Int_Hi_Write:
-    lfsr    0, myArray
-    movwf   POSTINC0, A
-    lfsr    2, myArray
-    movlw   1
-    call    LCD_Write_Message
-    call    delay1
+KeyPad_Int_Hi_Output:
+    movwf   KeyPad_TEMP, A
+    decf    counter, A
     return
 
 L_interrupts:
-;    goto    
+    goto    $    
 
 ; ******* Programme FLASH read Setup Code ***********************
 setup:
@@ -72,9 +70,95 @@ setup:
 start:
     call    write_Enter_Temp
     call    LCD_SecondLine
-;    goto    $
+    movlw   0x04
+    movwf   counter, A
+    call    KeyPad_Enter
+    call    delay1
     call    write_Current_Temp
     goto    Current_Temp_loop
+
+
+KeyPad_Enter:
+    movlw   0x03
+    cpfseq  counter, A
+    goto    continue1
+    call    KeyPad_Enter_1
+continue1:
+    movlw   0x02
+    cpfseq  counter, A
+    goto    continue2
+    call    KeyPad_Enter_2
+continue2:
+    movlw   0x01
+    cpfseq  counter, A
+    goto    continue3
+    call    KeyPad_Enter_3
+continue3:
+    movlw   0x00
+    cpfseq  counter, A
+    goto    continue4
+    call    KeyPad_Enter_4
+continue4:
+    movlw   0x00
+    cpfseq  counter, A
+    goto    continue5
+    return
+continue5:
+    bra	    KeyPad_Enter
+
+KeyPad_Enter_1:
+    call    LCD_SecondLine
+    movff   KeyPad_TEMP, target_temp
+    lfsr    0, myArray
+    movff   target_temp, POSTINC0
+    lfsr    2, myArray
+    movlw   1
+    call    LCD_Write_Message
+    call    delay3
+    return
+
+KeyPad_Enter_2:
+    call    LCD_SecondLine
+    movff   KeyPad_TEMP, target_temp+1
+    lfsr    0, myArray
+    movff   target_temp, POSTINC0
+    movff   target_temp+1, POSTINC0
+    lfsr    2, myArray
+    movlw   2
+    call    LCD_Write_Message
+    call    delay3
+    return
+
+KeyPad_Enter_3:
+    call    LCD_SecondLine
+    movff   KeyPad_TEMP, target_temp+2
+    lfsr    0, myArray
+    movff   target_temp, POSTINC0
+    movff   target_temp+1, POSTINC0
+    movff   target_temp+2, POSTINC0
+    movlw   0x2e
+    movwf   POSTINC0, A
+    lfsr    2, myArray
+    movlw   4
+    call    LCD_Write_Message
+    call    delay3
+    return
+
+KeyPad_Enter_4:
+    call    LCD_SecondLine
+    movff   KeyPad_TEMP, target_temp+3
+    lfsr    0, myArray
+    movff   target_temp, POSTINC0
+    movff   target_temp+1, POSTINC0
+    movff   target_temp+2, POSTINC0
+    movlw   0x2e
+    movwf   POSTINC0, A
+    movff   target_temp+3, POSTINC0
+    lfsr    2, myArray
+    movlw   5
+    call    LCD_Write_Message
+    call    delay3
+    return
 
 
 write_Enter_Temp:

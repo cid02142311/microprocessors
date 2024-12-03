@@ -1,6 +1,6 @@
 #include <xc.inc>
 
-extrn	KeyPad_Int_Hi_Write
+extrn	KeyPad_Int_Hi_Output
 
 global  KeyPad_Setup, KeyPad_Read
 global	KeyPad_Int_Hi
@@ -25,7 +25,7 @@ KeyPad_Int_Hi:
     retfie  f			; if not then return
     call    KeyPad_Read
     cpfseq  interrupt, A
-    call    KeyPad_Int_Hi_Write
+    call    KeyPad_Int_Hi_Output
     bcf	    TMR0IF		; clear interrupt flag
     retfie  f			; fast return from interrupt
 
