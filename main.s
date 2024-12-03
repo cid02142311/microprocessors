@@ -69,7 +69,6 @@ setup:
 ; ******* Main programme ****************************************
 start:
     call    write_Enter_Temp
-    call    LCD_SecondLine
     movlw   0x04
     movwf   counter, A
     call    KeyPad_Enter
@@ -79,6 +78,39 @@ start:
 
 
 KeyPad_Enter:
+    call    LCD_SecondLine
+    lfsr    0, myArray
+    movlw   ' '
+    movwf   POSTINC0, A
+    movlw   ' '
+    movwf   POSTINC0, A
+    movlw   ' '
+    movwf   POSTINC0, A
+    movlw   0x2e
+    movwf   POSTINC0, A
+    movlw   ' '
+    movwf   POSTINC0, A
+    movlw   ' '
+    movwf   POSTINC0, A
+    movlw   'd'
+    movwf   POSTINC0, A
+    movlw   'e'
+    movwf   POSTINC0, A
+    movlw   'g'
+    movwf   POSTINC0, A
+    movlw   'r'
+    movwf   POSTINC0, A
+    movlw   'e'
+    movwf   POSTINC0, A
+    movlw   'e'
+    movwf   POSTINC0, A
+    movlw   's'
+    movwf   POSTINC0, A
+    lfsr    2, myArray
+    movlw   13
+    call    LCD_Write_Message
+    call    delay3
+KeyPad_loop:
     movlw   0x03
     cpfseq  counter, A
     goto    continue1
@@ -104,7 +136,7 @@ continue4:
     goto    continue5
     return
 continue5:
-    bra	    KeyPad_Enter
+    bra	    KeyPad_loop
 
 KeyPad_Enter_1:
     call    LCD_SecondLine
