@@ -1,0 +1,110 @@
+Current_Temp_loop:
+    ; Subtract OUT3 (most significant digit of current_temp) from target_temp
+    movf    OUT3, A               ; Load current temperature digit (OUT3) into A
+    sublw   0x30                  ; Convert ASCII to numeric (subtract '0' -> 0x30)
+    movwf   temp_diff             ; Store numeric value of current temp in temp_diff
+
+    movf    target_temp, A       ; Load target temperature digit (target_temp)
+    sublw   0x30                  ; Convert target_temp to numeric (subtract '0')
+    subwf   temp_diff, 1, 0       ; Subtract target_temp - current_temp (temp_diff)
+
+    btfss   STATUS, C            ; Check for borrow (carry flag is clear if borrow occurs)
+    goto    handle_borrow         ; If borrow occurs, go to handle_borrow
+
+    movlw   0x30                  ; No borrow, continue processing (convert back to ASCII)
+    addwf   temp_diff, A         ; Convert result back to ASCII by adding '0'
+    movff   temp_diff, POSTINC0   ; Store result in LCD buffer
+    goto    skip_borrow
+
+handle_borrow:
+    ; If there is a borrow, we subtract 1 from the next higher digit
+    movf    OUT2, A              ; Load next higher digit (OUT2)
+    sublw   0x30                 ; Convert to numeric
+    subwf   OUT2, 1, 0           ; Subtract 1 from next digit (borrow adjustment)
+    
+    movlw   0x0A                 ; Add 10 (0x0A) to adjust the current digit (OUT3)
+    addwf   temp_diff, A         ; Add 10 to current digit to correct the borrow
+    movff   temp_diff, POSTINC0   ; Store result in LCD buffer
+
+skip_borrow:
+    ; Continue with OUT2 (second digit of current_temp)
+    movf    OUT2, A               ; Load current temperature digit (OUT2) into A
+    sublw   0x30                  ; Convert ASCII to numeric
+    movwf   temp_diff+1           ; Store numeric value in temp_diff+1
+
+    movf    target_temp+1, A     ; Load target temperature digit (target_temp+1)
+    sublw   0x30                  ; Convert target_temp+1 to numeric
+    subwf   temp_diff+1, 1, 0     ; Subtract target_temp+1 - current_temp
+
+    btfss   STATUS, C            ; Check for borrow
+    goto    handle_borrow_2       ; If borrow, go to handle_borrow_2
+
+    movlw   0x30                 ; Convert result back to ASCII
+    addwf   temp_diff+1, A       ; Add 0x30 to get the ASCII value of the result
+    movff   temp_diff+1, POSTINC0 ; Store result in LCD buffer
+    goto    skip_borrow_2
+
+handle_borrow_2:
+    ; If there is a borrow for OUT2, subtract 1 from OUT1
+    movf    OUT1, A              ; Load next higher digit (OUT1)
+    sublw   0x30                 ; Convert to numeric
+    subwf   OUT1, 1, 0           ; Subtract 1 from OUT1 (borrow adjustment)
+    
+    movlw   0x0A                 ; Add 10 to OUT2 to correct the borrow
+    addwf   temp_diff+1, A       ; Add 10 to current digit to correct the borrow
+    movff   temp_diff+1, POSTINC0 ; Store result in LCD buffer
+
+skip_borrow_2:
+    ; Continue with OUT1 (third digit of current_temp)
+    movf    OUT1, A               ; Load current temperature digit (OUT1) into A
+    sublw   0x30                  ; Convert ASCII to numeric
+    movwf   temp_diff+2           ; Store numeric value in temp_diff+2
+
+    movf    target_temp+2, A     ; Load target temperature digit (target_temp+2)
+    sublw   0x30                  ; Convert target_temp+2 to numeric
+    subwf   temp_diff+2, 1, 0     ; Subtract target_temp+2 - current_temp
+
+    btfss   STATUS, C            ; Check for borrow
+    goto    handle_borrow_3       ; If borrow, go to handle_borrow_3
+
+    movlw   0x30                 ; Convert result back to ASCII
+    addwf   temp_diff+2, A       ; Add 0x30 to get the ASCII value of the result
+    movff   temp_diff+2, POSTINC0 ; Store result in LCD buffer
+    goto    skip_borrow_3
+
+handle_borrow_3:
+    ; If there is a borrow for OUT1, subtract 1 from OUT0
+    movf    OUT0, A              ; Load next higher digit (OUT0)
+    sublw   0x30                 ; Convert to numeric
+    subwf   OUT0, 1, 0           ; Subtract 1 from OUT0 (borrow adjustment)
+    
+    movlw   0x0A                 ; Add 10 to OUT1 to correct the borrow
+    addwf   temp_diff+2, A       ; Add 10 to current digit to correct the borrow
+    movff   temp_diff+2, POSTINC0 ; Store result in LCD buffer
+
+skip_borrow_3:
+    ; Finally move to OUT0 (least significant digit of current_temp)
+    movf    OUT0, A               ; Load current temperature digit (OUT0) into A
+    sublw   0x30                  ; Convert ASCII to numeric
+    movwf   temp_diff+3           ; Store numeric value in temp_diff+3
+
+    movf    target_temp+3, A     ; Load target temperature digit (target_temp+3)
+    sublw   0x30                  ; Convert target_temp+3 to numeric
+    subwf   temp_diff+3, 1, 0     ; Subtract target_temp+3 - current_temp
+
+    btfss   STATUS, C            ; Check for borrow
+    movlw   0x0F                 ; If borrow, add 10 to correct the result
+    addwf   temp_diff+3, A       ; Add 10 if borrow
+
+    movlw   0x30                 ; Convert result back to ASCII
+    addwf   temp_diff+3, A       ; Add 0x30 to get the ASCII value of the result
+    movff   temp_diff+3, POSTINC0 ; Store result in LCD buffer
+
+    lfsr    0, myArray
+    movlw   0x2e                  ; Display decimal point ('.')
+    movwf   POSTINC0, A
+    lfsr    2, myArray
+    movlw   5
+    call    LCD_Write_Message     ; Display the result on LCD
+
+    goto    Current_Temp_loop     ; Repeat the loop
