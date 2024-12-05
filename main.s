@@ -19,6 +19,7 @@ delay_count_3:	ds  1
 delay_count_4:	ds  1
 KeyPad_TEMP:	ds  1
 target_temp:	ds  4
+temp_diff:	ds  4
 
 psect	udata_bank4 ; reserve data anywhere in RAM (here at 0x400)
 myArray:    ds 0x80 ; reserve 128 bytes for message data
@@ -29,6 +30,11 @@ Enter_Temp:
     db	'E','n','t','e','r',' ','T','E','M','P',':',0x0a
 				; message, plus carriage return
     Enter_Temp_l  EQU	12	; length of data
+    align	  2
+degrees:
+    db	' ',' ',' ','.',' ',' ','d','e','g','r','e','e','s',0x0a
+				; message, plus carriage return
+    degrees_l  EQU	14	; length of data
     align	  2
 Current_Temp:
     db	'C','u','r','r','e','n','t',' ','T','E','M','P',':',0x0a
@@ -69,46 +75,58 @@ setup:
 ; ******* Main programme ****************************************
 start:
     call    write_Enter_Temp
-    movlw   0x04
-    movwf   counter, A
     call    KeyPad_Enter
-    call    delay1
     call    write_Current_Temp
     goto    Current_Temp_loop
 
 
+write_Enter_Temp:
+    call    LCD_FirstLine
+    lfsr    0, myArray		; Load FSR0 with address in RAM	
+    movlw   low highword(Enter_Temp)   ; address of data in PM
+    movwf   TBLPTRU, A		; load upper bits to TBLPTRU
+    movlw   high(Enter_Temp)	; address of data in PM
+    movwf   TBLPTRH, A		; load high byte to TBLPTRH
+    movlw   low(Enter_Temp)	; address of data in PM
+    movwf   TBLPTRL, A		; load low byte to TBLPTRL
+    movlw   Enter_Temp_l	; bytes to read
+    movwf   counter, A		; our counter register
+enter_loop:
+    tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
+    movff   TABLAT, POSTINC0	; move data from TABLAT to (FSR0), inc FSR0	
+    decfsz  counter, A		; count down to zero
+    bra	    enter_loop		; keep going until finished
+
+    movlw   Enter_Temp_l-1	; output message to LCD
+				; don't send the final carriage return to LCD
+    lfsr    2, myArray
+    call    LCD_Write_Message
+    return
+
+
 KeyPad_Enter:
     call    LCD_SecondLine
-    lfsr    0, myArray
-    movlw   ' '
-    movwf   POSTINC0, A
-    movlw   ' '
-    movwf   POSTINC0, A
-    movlw   ' '
-    movwf   POSTINC0, A
-    movlw   0x2e
-    movwf   POSTINC0, A
-    movlw   ' '
-    movwf   POSTINC0, A
-    movlw   ' '
-    movwf   POSTINC0, A
-    movlw   'd'
-    movwf   POSTINC0, A
-    movlw   'e'
-    movwf   POSTINC0, A
-    movlw   'g'
-    movwf   POSTINC0, A
-    movlw   'r'
-    movwf   POSTINC0, A
-    movlw   'e'
-    movwf   POSTINC0, A
-    movlw   'e'
-    movwf   POSTINC0, A
-    movlw   's'
-    movwf   POSTINC0, A
+    lfsr    0, myArray		; Load FSR0 with address in RAM	
+    movlw   low highword(degrees)   ; address of data in PM
+    movwf   TBLPTRU, A		; load upper bits to TBLPTRU
+    movlw   high(degrees)	; address of data in PM
+    movwf   TBLPTRH, A		; load high byte to TBLPTRH
+    movlw   low(degrees)	; address of data in PM
+    movwf   TBLPTRL, A		; load low byte to TBLPTRL
+    movlw   degrees_l		; bytes to read
+    movwf   counter, A		; our counter register
+degrees_loop:
+    tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
+    movff   TABLAT, POSTINC0	; move data from TABLAT to (FSR0), inc FSR0	
+    decfsz  counter, A		; count down to zero
+    bra	    degrees_loop	; keep going until finished
+
+    movlw   degrees_l-1	; output message to LCD
+				; don't send the final carriage return to LCD
     lfsr    2, myArray
-    movlw   13
     call    LCD_Write_Message
+    movlw   0x04
+    movwf   counter, A
     call    delay3
 KeyPad_loop:
     movlw   0x03
@@ -128,15 +146,10 @@ continue2:
 continue3:
     movlw   0x00
     cpfseq  counter, A
-    goto    continue4
-    call    KeyPad_Enter_4
-continue4:
-    movlw   0x00
-    cpfseq  counter, A
-    goto    continue5
-    return
-continue5:
     bra	    KeyPad_loop
+    call    KeyPad_Enter_4
+    call    delay1
+    return
 
 KeyPad_Enter_1:
     call    LCD_SecondLine
@@ -193,29 +206,6 @@ KeyPad_Enter_4:
     return
 
 
-write_Enter_Temp:
-    call    LCD_FirstLine
-    lfsr    0, myArray		; Load FSR0 with address in RAM	
-    movlw   low highword(Enter_Temp)   ; address of data in PM
-    movwf   TBLPTRU, A		; load upper bits to TBLPTRU
-    movlw   high(Enter_Temp)	; address of data in PM
-    movwf   TBLPTRH, A		; load high byte to TBLPTRH
-    movlw   low(Enter_Temp)	; address of data in PM
-    movwf   TBLPTRL, A		; load low byte to TBLPTRL
-    movlw   Enter_Temp_l	; bytes to read
-    movwf   counter, A		; our counter register
-enter_loop:
-    tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
-    movff   TABLAT, POSTINC0	; move data from TABLAT to (FSR0), inc FSR0	
-    decfsz  counter, A		; count down to zero
-    bra	    enter_loop		; keep going until finished
-
-    movlw   Enter_Temp_l-1	; output message to LCD
-				; don't send the final carriage return to LCD
-    lfsr    2, myArray
-    call    LCD_Write_Message
-    return
-
 write_Current_Temp:
     call    LCD_FirstLine
     lfsr    0, myArray		; Load FSR0 with address in RAM	
@@ -239,35 +229,56 @@ current_loop:
     call    LCD_Write_Message
     return
 
+
 Current_Temp_loop:
     call    ADC_Read
     call    LCD_SecondLine
+;    lfsr    0, myArray
+;    movff   OUT3, POSTINC0
+;    movff   OUT2, POSTINC0
+;    movff   OUT1, POSTINC0
+;    movlw   0x2e
+;    movwf   POSTINC0, A
+;    movff   OUT0, POSTINC0
+;    lfsr    2, myArray
+;    movlw   5
+;    call    LCD_Write_Message
+
+    movff   OUT3, temp_diff
+    movf    target_temp, A
+    subwf   temp_diff, 1, 0
+    movlw   0x30
+    addwf   temp_diff, A
+
+    movff   OUT2, temp_diff+1
+    movf    target_temp+1, A
+    subwf   temp_diff+1, 1, 0
+    movlw   0x30
+    addwf   temp_diff+1, A
+
+    movff   OUT1, temp_diff+2
+    movf    target_temp+2, A
+    subwf   temp_diff+2, 1, 0
+    movlw   0x30
+    addwf   temp_diff+2, A
+
+    movff   OUT0, temp_diff+3
+    movf    target_temp+3, A
+    subwf   temp_diff+3, 1, 0
+    movlw   0x30
+    addwf   temp_diff+3, A
+
     lfsr    0, myArray
-    movff   OUT3, POSTINC0
-    movff   OUT2, POSTINC0
-    movff   OUT1, POSTINC0
+    movff   temp_diff, POSTINC0
+    movff   temp_diff+1, POSTINC0
+    movff   temp_diff+2, POSTINC0
     movlw   0x2e
     movwf   POSTINC0, A
-    movff   OUT0, POSTINC0
-    movlw   ' '
-    movwf   POSTINC0, A
-    movlw   'd'
-    movwf   POSTINC0, A
-    movlw   'e'
-    movwf   POSTINC0, A
-    movlw   'g'
-    movwf   POSTINC0, A
-    movlw   'r'
-    movwf   POSTINC0, A
-    movlw   'e'
-    movwf   POSTINC0, A
-    movlw   'e'
-    movwf   POSTINC0, A
-    movlw   's'
-    movwf   POSTINC0, A
+    movff   temp_diff+3, POSTINC0
     lfsr    2, myArray
-    movlw   13
+    movlw   5
     call    LCD_Write_Message
+
     goto    Current_Temp_loop	    ; goto current line in code
 
 
