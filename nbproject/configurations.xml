@@ -23,6 +23,9 @@
       <itemPath>LCD.s</itemPath>
       <itemPath>UART.s</itemPath>
       <itemPath>ADC.s</itemPath>
+      <itemPath>Fans.s</itemPath>
+      <itemPath>subtraction.s</itemPath>
+      <itemPath>differentiation.s</itemPath>
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>

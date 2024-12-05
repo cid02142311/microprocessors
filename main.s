@@ -7,8 +7,14 @@ extrn	ADC_Setup, ADC_Read		    ; external ADC subroutines
 extrn	KeyPad_Setup, KeyPad_Read	    ; external KeyPad subroutines
 extrn	KeyPad_Int_Hi
 extrn	OUT3, OUT2, OUT1, OUT0
+extrn	subtraction
+extrn	temp_diff
+extrn	differentiation
+extrn	temp_rate_diff
 
 global	KeyPad_Int_Hi_Output
+global	target_temp
+global	POUT1, POUT0
 
 
 psect	udata_acs   ; reserve data space in access ram
@@ -19,7 +25,8 @@ delay_count_3:	ds  1
 delay_count_4:	ds  1
 KeyPad_TEMP:	ds  1
 target_temp:	ds  4
-temp_diff:	ds  4
+POUT1:		ds  1
+POUT0:		ds  1
 
 psect	udata_bank4 ; reserve data anywhere in RAM (here at 0x400)
 myArray:    ds 0x80 ; reserve 128 bytes for message data
@@ -32,7 +39,7 @@ Enter_Temp:
     Enter_Temp_l  EQU	12	; length of data
     align	  2
 degrees:
-    db	' ',' ',' ','.',' ',' ','d','e','g','r','e','e','s',0x0a
+    db	' ',' ',' ','.','0',' ','d','e','g','r','e','e','s',0x0a
 				; message, plus carriage return
     degrees_l  EQU	14	; length of data
     align	  2
@@ -125,29 +132,26 @@ degrees_loop:
 				; don't send the final carriage return to LCD
     lfsr    2, myArray
     call    LCD_Write_Message
-    movlw   0x04
+    movlw   0x03
     movwf   counter, A
     call    delay3
 KeyPad_loop:
-    movlw   0x03
+    movlw   0x02
     cpfseq  counter, A
     goto    continue1
     call    KeyPad_Enter_1
 continue1:
-    movlw   0x02
+    movlw   0x01
     cpfseq  counter, A
     goto    continue2
     call    KeyPad_Enter_2
 continue2:
-    movlw   0x01
-    cpfseq  counter, A
-    goto    continue3
-    call    KeyPad_Enter_3
-continue3:
     movlw   0x00
     cpfseq  counter, A
     bra	    KeyPad_loop
-    call    KeyPad_Enter_4
+    call    KeyPad_Enter_3
+    movlw   '0'
+    movwf   target_temp+3, A
     call    delay1
     return
 
@@ -181,26 +185,8 @@ KeyPad_Enter_3:
     movff   target_temp, POSTINC0
     movff   target_temp+1, POSTINC0
     movff   target_temp+2, POSTINC0
-    movlw   0x2e
-    movwf   POSTINC0, A
     lfsr    2, myArray
-    movlw   4
-    call    LCD_Write_Message
-    call    delay3
-    return
-
-KeyPad_Enter_4:
-    call    LCD_SecondLine
-    movff   KeyPad_TEMP, target_temp+3
-    lfsr    0, myArray
-    movff   target_temp, POSTINC0
-    movff   target_temp+1, POSTINC0
-    movff   target_temp+2, POSTINC0
-    movlw   0x2e
-    movwf   POSTINC0, A
-    movff   target_temp+3, POSTINC0
-    lfsr    2, myArray
-    movlw   5
+    movlw   3
     call    LCD_Write_Message
     call    delay3
     return
@@ -233,51 +219,48 @@ current_loop:
 Current_Temp_loop:
     call    ADC_Read
     call    LCD_SecondLine
+    lfsr    0, myArray
+    movff   OUT3, POSTINC0
+    movff   OUT2, POSTINC0
+    movff   OUT1, POSTINC0
+    movlw   0x2e
+    movwf   POSTINC0, A
+    movff   OUT0, POSTINC0
+    lfsr    2, myArray
+    movlw   5
+    call    LCD_Write_Message
+
+    call    subtraction
+    call    differentiation
+
+    movff   OUT1, POUT1
+    movff   OUT0, POUT0
+
+;    movlw   0x30
+;    addwf   temp_diff, A
+;    addwf   temp_diff+1, A
+;    addwf   temp_diff+2, A
+;    addwf   temp_diff+3, A
+;    addwf   temp_rate_diff, A
+;    addwf   temp_rate_diff+1, A
+
 ;    lfsr    0, myArray
-;    movff   OUT3, POSTINC0
-;    movff   OUT2, POSTINC0
-;    movff   OUT1, POSTINC0
+;    movff   temp_diff, POSTINC0
+;    movff   temp_diff+1, POSTINC0
+;    movff   temp_diff+2, POSTINC0
 ;    movlw   0x2e
 ;    movwf   POSTINC0, A
-;    movff   OUT0, POSTINC0
+;    movff   temp_diff+3, POSTINC0
 ;    lfsr    2, myArray
 ;    movlw   5
 ;    call    LCD_Write_Message
 
-    movff   OUT3, temp_diff
-    movf    target_temp, A
-    subwf   temp_diff, 1, 0
-    movlw   0x30
-    addwf   temp_diff, A
-
-    movff   OUT2, temp_diff+1
-    movf    target_temp+1, A
-    subwf   temp_diff+1, 1, 0
-    movlw   0x30
-    addwf   temp_diff+1, A
-
-    movff   OUT1, temp_diff+2
-    movf    target_temp+2, A
-    subwf   temp_diff+2, 1, 0
-    movlw   0x30
-    addwf   temp_diff+2, A
-
-    movff   OUT0, temp_diff+3
-    movf    target_temp+3, A
-    subwf   temp_diff+3, 1, 0
-    movlw   0x30
-    addwf   temp_diff+3, A
-
-    lfsr    0, myArray
-    movff   temp_diff, POSTINC0
-    movff   temp_diff+1, POSTINC0
-    movff   temp_diff+2, POSTINC0
-    movlw   0x2e
-    movwf   POSTINC0, A
-    movff   temp_diff+3, POSTINC0
-    lfsr    2, myArray
-    movlw   5
-    call    LCD_Write_Message
+;    lfsr    0, myArray
+;    movff   temp_rate_diff, POSTINC0
+;    movff   temp_rate_diff+1, POSTINC0
+;    lfsr    2, myArray
+;    movlw   2
+;    call    LCD_Write_Message
 
     goto    Current_Temp_loop	    ; goto current line in code
 
