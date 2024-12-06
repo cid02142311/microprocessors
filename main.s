@@ -6,11 +6,12 @@ extrn	LCD_Setup, LCD_Write_Message, LCD_FirstLine, LCD_SecondLine
 extrn	ADC_Setup, ADC_Read		    ; external ADC subroutines
 extrn	KeyPad_Setup, KeyPad_Read	    ; external KeyPad subroutines
 extrn	KeyPad_Int_Hi
-extrn	OUT3, OUT2, OUT1, OUT0
+extrn	OUT3, OUT2, OUT1, OUT0		    ; ascii chars
 extrn	subtraction
-extrn	temp_diff
+extrn	temp_diff			    ; 4 dec digits
 extrn	differentiation
-extrn	temp_rate_diff
+extrn	temp_rate_diff			    ; 2 dec digits
+extrn	Temperature_Control
 
 global	KeyPad_Int_Hi_Output
 global	target_temp
@@ -23,6 +24,7 @@ delay_count:	ds  1    ; reserve one byte for counter in the delay routine
 delay_count_2:	ds  1
 delay_count_3:	ds  1
 delay_count_4:	ds  1
+KeyPad_detector:ds  1
 KeyPad_TEMP:	ds  1
 target_temp:	ds  4
 POUT1:		ds  1
@@ -41,12 +43,22 @@ Enter_Temp:
 degrees:
     db	' ',' ',' ','.','0',' ','d','e','g','r','e','e','s',0x0a
 				; message, plus carriage return
-    degrees_l  EQU	14	; length of data
-    align	  2
+    degrees_l	    EQU 14	; length of data
+    align	    2
 Current_Temp:
     db	'C','u','r','r','e','n','t',' ','T','E','M','P',':',0x0a
 				; message, plus carriage return
     Current_Temp_l  EQU	14	; length of data
+    align	    2
+Temp_Diff:
+    db	'T','E','M','P',' ','d','i','f','f',':',0x0a
+				; message, plus carriage return
+    Temp_Diff_l	    EQU	11	; length of data
+    align	    2
+Temp_Rate_Diff:
+    db	'T','E','M','P',' ','r','a','t','e',' ','d','i','f','f',':',0x0a
+				; message, plus carriage return
+    Temp_Rate_Diff_l	EQU 16	; length of data
     align	    2
 
 
@@ -63,11 +75,12 @@ H_interrupts:
     goto    KeyPad_Int_Hi
 KeyPad_Int_Hi_Output:
     movwf   KeyPad_TEMP, A
-    decf    counter, A
+    decf    KeyPad_detector, A
     return
 
 L_interrupts:
     goto    $    
+
 
 ; ******* Programme FLASH read Setup Code ***********************
 setup:
@@ -79,12 +92,12 @@ setup:
     call    KeyPad_Setup	; setup KeyPad
     goto    start
 
+
 ; ******* Main programme ****************************************
 start:
     call    write_Enter_Temp
     call    KeyPad_Enter
-    call    write_Current_Temp
-    goto    Current_Temp_loop
+    goto    Current_Temp_
 
 
 write_Enter_Temp:
@@ -111,7 +124,7 @@ enter_loop:
     return
 
 
-KeyPad_Enter:
+write_degrees:
     call    LCD_SecondLine
     lfsr    0, myArray		; Load FSR0 with address in RAM	
     movlw   low highword(degrees)   ; address of data in PM
@@ -132,22 +145,26 @@ degrees_loop:
 				; don't send the final carriage return to LCD
     lfsr    2, myArray
     call    LCD_Write_Message
+    return
+
+KeyPad_Enter:
+    call    write_degrees
     movlw   0x03
-    movwf   counter, A
+    movwf   KeyPad_detector, A
     call    delay3
 KeyPad_loop:
     movlw   0x02
-    cpfseq  counter, A
+    cpfseq  KeyPad_detector, A
     goto    continue1
     call    KeyPad_Enter_1
 continue1:
     movlw   0x01
-    cpfseq  counter, A
+    cpfseq  KeyPad_detector, A
     goto    continue2
     call    KeyPad_Enter_2
 continue2:
     movlw   0x00
-    cpfseq  counter, A
+    cpfseq  KeyPad_detector, A
     bra	    KeyPad_loop
     call    KeyPad_Enter_3
     movlw   '0'
@@ -165,7 +182,6 @@ KeyPad_Enter_1:
     call    LCD_Write_Message
     call    delay3
     return
-
 KeyPad_Enter_2:
     call    LCD_SecondLine
     movff   KeyPad_TEMP, target_temp+1
@@ -177,7 +193,6 @@ KeyPad_Enter_2:
     call    LCD_Write_Message
     call    delay3
     return
-
 KeyPad_Enter_3:
     call    LCD_SecondLine
     movff   KeyPad_TEMP, target_temp+2
@@ -190,6 +205,118 @@ KeyPad_Enter_3:
     call    LCD_Write_Message
     call    delay3
     return
+
+
+; ***** show Current Temperature *****
+Current_Temp_:
+    movlw   0x01
+    movwf   KeyPad_detector, A
+    call    write_Current_Temp
+    call    write_degrees
+
+Current_Temp_loop:
+    call    ADC_Read
+
+    call    LCD_SecondLine
+    lfsr    0, myArray
+    movff   OUT3, POSTINC0
+    movff   OUT2, POSTINC0
+    movff   OUT1, POSTINC0
+    movlw   0x2e
+    movwf   POSTINC0, A
+    movff   OUT0, POSTINC0
+    lfsr    2, myArray
+    movlw   5
+    call    LCD_Write_Message
+
+    call    subtraction
+    call    differentiation
+    movff   OUT1, POUT1
+    movff   OUT0, POUT0
+
+    call    Temperature_Control
+
+    movlw   0x00
+    cpfseq  KeyPad_detector, A
+    bra	    Current_Temp_loop	    ; goto current line in code
+    call    KeyPad_judgement
+    call    LCD_Setup
+    goto    Temp_Diff_
+
+
+; ***** show Temperature difference *****
+Temp_Diff_:
+    movlw   0x01
+    movwf   KeyPad_detector, A
+    call    write_Temp_Diff
+    call    write_degrees
+
+Temp_Diff_loop:
+    call    ADC_Read
+    
+    call    subtraction
+    call    differentiation
+    movff   OUT1, POUT1
+    movff   OUT0, POUT0
+
+    movlw   0x30
+    addwf   temp_diff, A
+    addwf   temp_diff+1, A
+    addwf   temp_diff+2, A
+    addwf   temp_diff+3, A
+    call    LCD_SecondLine
+    lfsr    0, myArray
+    movff   temp_diff, POSTINC0
+    movff   temp_diff+1, POSTINC0
+    movff   temp_diff+2, POSTINC0
+    movlw   0x2e
+    movwf   POSTINC0, A
+    movff   temp_diff+3, POSTINC0
+    lfsr    2, myArray
+    movlw   5
+    call    LCD_Write_Message
+    call    delay3
+
+    movlw   0x00
+    cpfseq  KeyPad_detector, A
+    bra	    Temp_Diff_loop	    ; goto current line in code
+    call    KeyPad_judgement
+    call    LCD_Setup
+    goto    Temp_Rate_Diff_
+
+
+; ***** show Temperature rate difference *****
+Temp_Rate_Diff_:
+    movlw   0x01
+    movwf   KeyPad_detector, A
+    call    write_Temp_Rate_Diff
+
+Temp_Rate_Diff_loop:
+    call    ADC_Read
+    
+    call    subtraction
+    call    differentiation
+    movff   OUT1, POUT1
+    movff   OUT0, POUT0
+
+    movlw   0x30
+    addwf   temp_rate_diff, A
+    addwf   temp_rate_diff+1, A
+    call    LCD_SecondLine
+    lfsr    0, myArray
+    movff   temp_rate_diff, POSTINC0
+    movff   temp_rate_diff+1, POSTINC0
+    lfsr    2, myArray
+    movlw   2
+    call    LCD_Write_Message
+    call    delay3
+
+    movlw   0x00
+    cpfseq  KeyPad_detector, A
+    bra	    Temp_Rate_Diff_loop	    ; goto current line in code
+    call    KeyPad_judgement
+    call    LCD_Setup
+    goto    Current_Temp_
 
 
 write_Current_Temp:
@@ -215,55 +342,59 @@ current_loop:
     call    LCD_Write_Message
     return
 
+write_Temp_Diff:
+    call    LCD_FirstLine
+    lfsr    0, myArray		; Load FSR0 with address in RAM	
+    movlw   low highword(Temp_Diff)   ; address of data in PM
+    movwf   TBLPTRU, A		; load upper bits to TBLPTRU
+    movlw   high(Temp_Diff)	; address of data in PM
+    movwf   TBLPTRH, A		; load high byte to TBLPTRH
+    movlw   low(Temp_Diff)	; address of data in PM
+    movwf   TBLPTRL, A		; load low byte to TBLPTRL
+    movlw   Temp_Diff_l		; bytes to read
+    movwf   counter, A		; our counter register
+diff_loop:
+    tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
+    movff   TABLAT, POSTINC0	; move data from TABLAT to (FSR0), inc FSR0	
+    decfsz  counter, A		; count down to zero
+    bra	    diff_loop	; keep going until finished
 
-Current_Temp_loop:
-    call    ADC_Read
-    call    LCD_SecondLine
-    lfsr    0, myArray
-    movff   OUT3, POSTINC0
-    movff   OUT2, POSTINC0
-    movff   OUT1, POSTINC0
-    movlw   0x2e
-    movwf   POSTINC0, A
-    movff   OUT0, POSTINC0
+    movlw   Temp_Diff_l-1	; output message to LCD
+				; don't send the final carriage return to LCD
     lfsr    2, myArray
-    movlw   5
     call    LCD_Write_Message
+    return
 
-    call    subtraction
-    call    differentiation
+write_Temp_Rate_Diff:
+    call    LCD_FirstLine
+    lfsr    0, myArray		; Load FSR0 with address in RAM	
+    movlw   low highword(Temp_Rate_Diff)   ; address of data in PM
+    movwf   TBLPTRU, A		; load upper bits to TBLPTRU
+    movlw   high(Temp_Rate_Diff)	; address of data in PM
+    movwf   TBLPTRH, A		; load high byte to TBLPTRH
+    movlw   low(Temp_Rate_Diff)	; address of data in PM
+    movwf   TBLPTRL, A		; load low byte to TBLPTRL
+    movlw   Temp_Rate_Diff_l		; bytes to read
+    movwf   counter, A		; our counter register
+rate_diff_loop:
+    tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
+    movff   TABLAT, POSTINC0	; move data from TABLAT to (FSR0), inc FSR0	
+    decfsz  counter, A		; count down to zero
+    bra	    rate_diff_loop	; keep going until finished
 
-    movff   OUT1, POUT1
-    movff   OUT0, POUT0
+    movlw   Temp_Rate_Diff_l-1	; output message to LCD
+				; don't send the final carriage return to LCD
+    lfsr    2, myArray
+    call    LCD_Write_Message
+    return
 
-;    movlw   0x30
-;    addwf   temp_diff, A
-;    addwf   temp_diff+1, A
-;    addwf   temp_diff+2, A
-;    addwf   temp_diff+3, A
-;    addwf   temp_rate_diff, A
-;    addwf   temp_rate_diff+1, A
 
-;    lfsr    0, myArray
-;    movff   temp_diff, POSTINC0
-;    movff   temp_diff+1, POSTINC0
-;    movff   temp_diff+2, POSTINC0
-;    movlw   0x2e
-;    movwf   POSTINC0, A
-;    movff   temp_diff+3, POSTINC0
-;    lfsr    2, myArray
-;    movlw   5
-;    call    LCD_Write_Message
-
-;    lfsr    0, myArray
-;    movff   temp_rate_diff, POSTINC0
-;    movff   temp_rate_diff+1, POSTINC0
-;    lfsr    2, myArray
-;    movlw   2
-;    call    LCD_Write_Message
-
-    goto    Current_Temp_loop	    ; goto current line in code
-
+KeyPad_judgement:
+    movlw   'C'
+    cpfseq  KeyPad_TEMP, A
+    return
+    goto    rst
+    
 
 ; some delay subroutines
 delay:

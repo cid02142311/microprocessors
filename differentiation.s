@@ -61,9 +61,9 @@ no_reverse:
 
 sub:
     clrf    STATUS, A
-    movff   arg3_2, temp_rate_diff+3
+    movff   arg3_2, temp_rate_diff+1
     movf    arg4_2, W, A
-    subwf   temp_rate_diff+3, A
+    subwf   temp_rate_diff+1, A
     btfss   STATUS, 0, A
     goto    borrow_1
     goto    skip_borrow_1
@@ -72,11 +72,11 @@ borrow_1:
     movlw   0x01
     subwf   arg3_1, A
     movlw   0x0a
-    addwf   temp_rate_diff+3, A
+    addwf   temp_rate_diff+1, A
 
 skip_borrow_1:
-    movff   arg3_1, temp_rate_diff+2
+    movff   arg3_1, temp_rate_diff
     movf    arg4_1, W, A
-    subwf   temp_rate_diff+2, A
+    subwf   temp_rate_diff, A
 
 end
