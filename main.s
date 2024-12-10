@@ -259,6 +259,8 @@ Temp_Diff_loop:
     movff   OUT1, POUT1
     movff   OUT0, POUT0
 
+    call    Temperature_Control
+
     movlw   0x30
     addwf   temp_diff, A
     addwf   temp_diff+1, A
@@ -266,7 +268,8 @@ Temp_Diff_loop:
     addwf   temp_diff+3, A
     call    LCD_SecondLine
     lfsr    0, myArray
-    movff   temp_diff, POSTINC0
+    movff   temp_diff+4, POSTINC0
+;    movff   temp_diff, POSTINC0
     movff   temp_diff+1, POSTINC0
     movff   temp_diff+2, POSTINC0
     movlw   0x2e
@@ -299,11 +302,14 @@ Temp_Rate_Diff_loop:
     movff   OUT1, POUT1
     movff   OUT0, POUT0
 
+    call    Temperature_Control
+
     movlw   0x30
     addwf   temp_rate_diff, A
     addwf   temp_rate_diff+1, A
     call    LCD_SecondLine
     lfsr    0, myArray
+    movff   temp_rate_diff+2, POSTINC0
     movff   temp_rate_diff, POSTINC0
     movff   temp_rate_diff+1, POSTINC0
     lfsr    2, myArray

@@ -7,7 +7,7 @@ global	differentiation
 global	temp_rate_diff
 
 psect	udata_acs   ; reserve data space in access ram
-temp_rate_diff: ds  2
+temp_rate_diff: ds  3
 arg3_1:		ds  1
 arg3_2:		ds  1
 arg4_1:		ds  1
@@ -43,6 +43,8 @@ equal:
     return
 
 reverse:
+    movlw   '-'
+    movwf   temp_rate_diff+2, A
     movff   POUT1, arg3_1
     movff   POUT0, arg3_2
     movff   OUT1, arg4_1
@@ -51,6 +53,8 @@ reverse:
     return
 
 no_reverse:
+    movlw   '+'
+    movwf   temp_rate_diff+2, A
     movff   OUT1, arg3_1
     movff   OUT0, arg3_2
     movff   POUT1, arg4_1
