@@ -23,15 +23,13 @@ delay:
 
 
 PWM_Setup:
-    movlw   11111111B
-    movwf   TRISF, A
-    movlw   11111111B
-    movwf   TRISG, A
+    bsf	    TRISF, 0, A
+    bsf	    TRISG, 0, A
 
-    movlw   0xff
-    movwf   PR2, A
-    movlw   0x0c
-    movwf   CCP1CON, A
+;    movlw   0xff
+;    movwf   PR2, A
+;    movlw   0x0c
+;    movwf   CCP1CON, A
     return
 
 
@@ -69,14 +67,14 @@ action:
 
 Turn_On_Fan:
     ; Turn on the fan (increase PWM duty cycle to full power)
-    call    Adjust_PWM_Fan	    ; Set the PWM duty cycle to maximum for the fan
+;    call    Adjust_PWM_Fan	    ; Set the PWM duty cycle to maximum for the fan
     bsf     PORTF, FAN_PIN, A	    ; Turn on the fan (via PWM)
     bcf     PORTG, HEATER_PIN, A    ; Turn off the heater
     return
 
 Turn_On_Heater:
     ; Turn on the heater (increase PWM duty cycle to full power)
-    call    Adjust_PWM_Heater	    ; Set the PWM duty cycle to maximum for the heater
+;    call    Adjust_PWM_Heater	    ; Set the PWM duty cycle to maximum for the heater
     bsf     PORTG, HEATER_PIN, A    ; Turn on the heater (via PWM)
     bcf     PORTF, FAN_PIN, A	    ; Turn off the fan
     return
@@ -88,8 +86,9 @@ Adjust_PWM_Fan:
     ; Scale temperature difference to PWM duty cycle (0-255 range)
     call    calculation
     movf    PWM_counter+1, W, A
-    movlw   0xff
     movwf   CCPR1L, A		    ; Store result in CCPR1L (duty cycle register)
+    movf    PWM_counter, W, A
+    movwf   CCPR1H, A
     return
 
 Adjust_PWM_Heater:
@@ -98,6 +97,8 @@ Adjust_PWM_Heater:
     call    calculation
     movf    PWM_counter+1, W, A
     movwf   CCPR1L, A		    ; Store result in CCPR1L (duty cycle register)
+    movf    PWM_counter, W, A
+    movwf   CCPR1H, A
     return
 
 
