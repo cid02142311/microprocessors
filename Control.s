@@ -9,14 +9,10 @@ global	Temperature_Control
 
 psect	udata_acs   ; reserve data space in access ram
 delay_count:	ds  1
-
-;; Define constants for temperature control
-;IDEAL_TEMP          EQU  25     ; Ideal temperature (in Celsius)
-;TEMP_THRESHOLD_HIGH EQU  30     ; Threshold to turn on fan (example)
-;TEMP_THRESHOLD_LOW  EQU  20     ; Threshold to turn on heater (example)
 ;; Define PWM parameters
-;FAN_PIN             EQU  RC0    ; Pin controlling the fan (could be connected to a MOSFET)
-;HEATER_PIN          EQU  RC1    ; Pin controlling the heater (could be connected to a MOSFET)
+FAN_PIN	    EQU  0x00	; Pin controlling the fan (could be connected to a MOSFET)
+HEATER_PIN  EQU  0x00	; Pin controlling the heater (could be connected to a MOSFET)
+PWM_counter:	ds  4
 
 
 psect	fans_code, class=CODE
@@ -54,55 +50,61 @@ Temperature_Control:
 ;    call    Adjust_PWM_Duty_Cycle
 ;    return
 
+
 no_action:
-    ; stop everything!   !   !
+    bcf     PORTF, FAN_PIN, A
+    bcf     PORTG, HEATER_PIN, A
     return
 
 action:
     movlw   '+'
     cpfseq  temp_diff+4, A
-    bra     Turn_On_Fan     ; Jump to fan control
+    bra     Turn_On_Fan		    ; Jump to fan control
     
     movlw   '-'
     cpfseq  temp_diff+4, A
-    bra     Turn_On_Heater  ; Jump to heater control
+    bra     Turn_On_Heater	    ; Jump to heater control
+
 
 Turn_On_Fan:
     ; Turn on the fan (increase PWM duty cycle to full power)
-    call    Set_PWM_Fan     ; Set the PWM duty cycle to maximum for the fan
-    bsf     FAN_PIN         ; Turn on the fan (via PWM)
-    bcf     HEATER_PIN      ; Turn off the heater
+    call    Adjust_PWM_Fan	    ; Set the PWM duty cycle to maximum for the fan
+    bsf     PORTF, FAN_PIN, A	    ; Turn on the fan (via PWM)
+    bcf     PORTG, HEATER_PIN, A    ; Turn off the heater
     return
 
 Turn_On_Heater:
     ; Turn on the heater (increase PWM duty cycle to full power)
-    call    Set_PWM_Heater  ; Set the PWM duty cycle to maximum for the heater
-    bsf     HEATER_PIN      ; Turn on the heater (via PWM)
-    bcf     FAN_PIN         ; Turn off the fan
+    call    Adjust_PWM_Heater	    ; Set the PWM duty cycle to maximum for the heater
+    bsf     PORTG, HEATER_PIN, A    ; Turn on the heater (via PWM)
+    bcf     PORTF, FAN_PIN, A	    ; Turn off the fan
     return
 
-;; Adjust PWM duty cycle based on temperature difference
-;Adjust_PWM_Duty_Cycle:
-;    ; Here we can scale the duty cycle based on how far the temperature is from the ideal
-;    ; Example: A larger temperature difference will result in a higher duty cycle
-;    movf    ADC_RESULT, W   ; Load temperature difference (absolute value) into W
-;    ; Apply scaling factor to adjust the PWM duty cycle
-;    ; (Simple example: the greater the difference, the higher the duty cycle)
-;    ; This part needs to be scaled depending on the range of temperatures
-;    return
 
-;; Set PWM duty cycle for the fan
-;Set_PWM_Fan:
-;    ; Configure PWM to maximum duty cycle (example: 100%)
-;    movlw   0xFF            ; Set maximum duty cycle (full on)
-;    movwf   CCPR1L          ; Set the duty cycle for fan
-;    return
+Adjust_PWM_Fan:
+    ; Adjust PWM duty cycle based on temperature difference (temp_diff)
+    ; Example: Larger temperature difference will result in a higher duty cycle
+    ; Scale temperature difference to PWM duty cycle (0-255 range)
+    call    calculation
+    movlw   0x64		    ; Scaling factor (example: 100% max for large temperature difference)
+    mulwf   WREG, A		    ; Multiply temperature difference with scaling factor
+    movwf   CCPR1L, A		    ; Store result in CCPR1L (duty cycle register)
+    return
 
-;; Set PWM duty cycle for the heater
-;Set_PWM_Heater:
-;    ; Configure PWM to maximum duty cycle (example: 100%)
-;    movlw   0xFF            ; Set maximum duty cycle (full on)
-;    movwf   CCPR1L          ; Set the duty cycle for heater
-;    return
+Adjust_PWM_Heater:
+    ; Adjust PWM duty cycle for the heater based on temperature difference
+    ; Scale temperature difference to PWM duty cycle (0-255 range)
+    call    calculation
+    movlw   0x64		    ; Scaling factor (example: 100% max for large temperature difference)
+    mulwf   WREG, A		    ; Multiply temperature difference with scaling factor
+    movwf   CCPR1L, A		    ; Store result in CCPR1L (duty cycle register)
+    return
+
+
+calculation:
+    movf    temp_diff, W, A
+    mullw   0x100
+    
+
 
 end
