@@ -438,3 +438,32 @@ delay4:
     return
 
 end rst
+
+Adjust_PWM_Fan:
+    ; Adjust PWM duty cycle based on temperature difference (temp_diff)
+    ; Example: Larger temperature difference will result in a higher duty cycle
+    movf    temp_diff, W      ; Load temperature difference (e.g., current_temp - target_temp)
+    sublw   0x30              ; Subtract '0' (convert to numeric if necessary)
+    movwf   temp_rate_diff    ; Store the temperature difference
+
+    ; Scale temperature difference to PWM duty cycle (0-255 range)
+    movf    temp_rate_diff, W
+    movlw   0x64              ; Scaling factor (example: 100% max for large temperature difference)
+    mulwf   WREG              ; Multiply temperature difference with scaling factor
+    movwf   CCPR1L            ; Store result in CCPR1L (duty cycle register)
+    
+    return
+
+Adjust_PWM_Heater:
+    ; Adjust PWM duty cycle for the heater based on temperature difference
+    movf    temp_diff, W      ; Load temperature difference (e.g., current_temp - target_temp)
+    sublw   0x30              ; Subtract '0' (convert to numeric if necessary)
+    movwf   temp_rate_diff    ; Store the temperature difference
+
+    ; Scale temperature difference to PWM duty cycle (0-255 range)
+    movf    temp_rate_diff, W
+    movlw   0x64              ; Scaling factor (example: 100% max for large temperature difference)
+    mulwf   WREG              ; Multiply temperature difference with scaling factor
+    movwf   CCPR1L            ; Store result in CCPR1L (duty cycle register)
+    
+    return
