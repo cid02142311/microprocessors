@@ -104,7 +104,57 @@ Adjust_PWM_Heater:
 calculation:
     movf    temp_diff, W, A
     mullw   0x100
-    
+
+; Assume the following:
+; temp_diff = 0x01, temp_diff+1 = 0x02, temp_diff+2 = 0x03, temp_diff+3 = 0x04
+
+; Convert temp_diff (4 ASCII hex digits) into a 16-bit hex number (0x4D2)
+
+; Step 1: Convert temp_diff to decimal and shift
+movf    temp_diff, W             ; Load the most significant digit (0x01)
+movlw   0x03                     ; Multiply by 1000 (shift to the thousands place)
+mulwf   WREG                     ; Multiply temp_diff by 1000
+movwf   temp_diff_1000           ; Store the result in temp_diff_1000 (higher digits)
+
+; Step 2: Convert temp_diff+1 to decimal and shift (hundreds place)
+movf    temp_diff+1, W           ; Load the second digit (0x02)
+movlw   0x02                     ; Multiply by 100 (shift to the hundreds place)
+mulwf   WREG                     ; Multiply temp_diff+1 by 100
+movwf   temp_diff_100            ; Store the result in temp_diff_100 (next digit)
+
+; Step 3: Convert temp_diff+2 to decimal and shift (tens place)
+movf    temp_diff+2, W           ; Load the third digit (0x03)
+movlw   0x01                     ; Multiply by 10 (shift to the tens place)
+mulwf   WREG                     ; Multiply temp_diff+2 by 10
+movwf   temp_diff_10             ; Store the result in temp_diff_10 (next digit)
+
+; Step 4: Convert temp_diff+3 to decimal (ones place)
+movf    temp_diff+3, W           ; Load the fourth digit (0x04)
+movwf   temp_diff_1              ; Store the result in temp_diff_1 (ones place)
+
+; Step 5: Combine all the results to form the final 16-bit hex number
+; temp_diff_1000 contains the thousands place (shifted)
+; temp_diff_100 contains the hundreds place
+; temp_diff_10 contains the tens place
+; temp_diff_1 contains the ones place
+
+; Add temp_diff_1000 to temp_diff_100
+addwf   temp_diff_1000, F
+movf    temp_diff_100, W
+addwf   temp_diff_1000, F       ; Add hundreds place
+
+; Add temp_diff_10 to temp_diff_1000
+movf    temp_diff_10, W
+addwf   temp_diff_1000, F       ; Add tens place
+
+; Finally, add temp_diff_1 to temp_diff_1000
+movf    temp_diff_1, W
+addwf   temp_diff_1000, F       ; Add ones place
+
+; Now temp_diff_1000 contains the 16-bit number 0x4D2
+; This is the final result in hex
+
+; You can store the result or display it as needed (e.g., send to the LCD, etc.)
 
 
 end
