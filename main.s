@@ -11,7 +11,7 @@ extrn	subtraction
 extrn	temp_diff			    ; 4 dec digits
 extrn	differentiation
 extrn	temp_rate_diff			    ; 2 dec digits
-extrn	Temperature_Control
+extrn	PWM_Setup, Temperature_Control
 
 global	KeyPad_Int_Hi_Output
 global	target_temp
@@ -90,6 +90,7 @@ setup:
     call    LCD_Setup		; setup LCD
     call    ADC_Setup		; setup ADC
     call    KeyPad_Setup	; setup KeyPad
+    call    PWM_Setup
     goto    start
 
 

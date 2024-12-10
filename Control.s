@@ -4,7 +4,7 @@ extrn	target_temp
 extrn	temp_diff
 extrn	temp_rate_diff
 
-global	Temperature_Control
+global	PWM_Setup, Temperature_Control
 
 
 psect	udata_acs   ; reserve data space in access ram
@@ -19,6 +19,19 @@ psect	fans_code, class=CODE
 delay:
     decfsz  delay_count, A	; decrement until zero
     bra	    delay
+    return
+
+
+PWM_Setup:
+    movlw   11111111B
+    movwf   TRISF, A
+    movlw   11111111B
+    movwf   TRISG, A
+
+    movlw   0xff
+    movwf   PR2, A
+    movlw   0x0c
+    movwf   CCP1CON, A
     return
 
 
@@ -40,15 +53,6 @@ Temperature_Control:
     cpfsgt  temp_diff+2, A
     goto    no_action
     goto    action
-
-;    movlw   IDEAL_TEMP      ; Load the ideal temperature value
-;    subwf   ADC_RESULT, W   ; Subtract the ADC result from the ideal temperature
-;    btfss   STATUS, 2 A		; If the temperature equals the ideal, skip the next instruction
-;    bra     Check_Heater_Fan; Skip comparison if temperature is not equal
-    ; Execute if temperature is equal to ideal
-    ; Adjust PWM duty cycle for the fan/heater based on temperature
-;    call    Adjust_PWM_Duty_Cycle
-;    return
 
 
 no_action:
@@ -84,8 +88,7 @@ Adjust_PWM_Fan:
     ; Scale temperature difference to PWM duty cycle (0-255 range)
     call    calculation
     movf    PWM_counter+1, W, A
-    movlw   0x64		    ; Scaling factor (example: 100% max for large temperature difference)
-    mulwf   WREG, A		    ; Multiply temperature difference with scaling factor
+    movlw   0xff
     movwf   CCPR1L, A		    ; Store result in CCPR1L (duty cycle register)
     return
 
@@ -94,8 +97,6 @@ Adjust_PWM_Heater:
     ; Scale temperature difference to PWM duty cycle (0-255 range)
     call    calculation
     movf    PWM_counter+1, W, A
-    movlw   0x64		    ; Scaling factor (example: 100% max for large temperature difference)
-    mulwf   WREG, A		    ; Multiply temperature difference with scaling factor
     movwf   CCPR1L, A		    ; Store result in CCPR1L (duty cycle register)
     return
 
@@ -120,19 +121,19 @@ calculation:
     movf    PRODH, W, A
     addwfc  PWM_counter, A
  
-    movlw   0x0A
-    mulwf   temp_rate_diff, A
-    movf    PRODL, W, A
-    addwf   PWM_counter+1, A
-    movf    PRODH, W, A
-    addwfc  PWM_counter, A
-
-    movlw   0x01
-    mulwf   temp_rate_diff+1, A
-    movf    PRODL, W, A
-    addwf   PWM_counter+1, A
-    movf    PRODH, W, A
-    addwfc  PWM_counter, A
+;    movlw   0x0A
+;    mulwf   temp_rate_diff, A
+;    movf    PRODL, W, A
+;    addwf   PWM_counter+1, A
+;    movf    PRODH, W, A
+;    addwfc  PWM_counter, A
+;
+;    movlw   0x01
+;    mulwf   temp_rate_diff+1, A
+;    movf    PRODL, W, A
+;    addwf   PWM_counter+1, A
+;    movf    PRODH, W, A
+;    addwfc  PWM_counter, A
 
     return
 
