@@ -16,6 +16,7 @@ extrn	PWM_Setup, Temperature_Control
 global	KeyPad_Int_Hi_Output
 global	target_temp
 global	POUT1, POUT0
+global	threshold
 
 
 psect	udata_acs   ; reserve data space in access ram
@@ -29,6 +30,7 @@ KeyPad_TEMP:	ds  1
 target_temp:	ds  4
 POUT1:		ds  1
 POUT0:		ds  1
+threshold:	ds  1
 
 psect	udata_bank4 ; reserve data anywhere in RAM (here at 0x400)
 myArray:    ds 0x80 ; reserve 128 bytes for message data
@@ -60,11 +62,18 @@ Temp_Rate_Diff:
 				; message, plus carriage return
     Temp_Rate_Diff_l	EQU 16	; length of data
     align	    2
+Threshold:
+    db	'T','h','r','e','s','h','o','l','d',':',0x0a
+				; message, plus carriage return
+    Threshold_l	EQU 11	; length of data
+    align	    2
 
 
 psect	code, abs	
 rst:
     org	    0x0
+    movlw   0x02
+    movwf   threshold, A
     goto    setup
     org	    0x0008		; High-priority interrupts
     goto    H_interrupts
@@ -229,6 +238,7 @@ Current_Temp_loop:
     lfsr    2, myArray
     movlw   5
     call    LCD_Write_Message
+    call    delay3
 
     call    subtraction
     call    differentiation
@@ -397,11 +407,67 @@ rate_diff_loop:
 
 
 KeyPad_judgement:
+    movlw   'A'
+    cpfseq  KeyPad_TEMP, A
+    goto    KeyPad_judgement_continue
+    goto    Threshold_Set
+KeyPad_judgement_continue:
     movlw   'C'
     cpfseq  KeyPad_TEMP, A
     return
     goto    rst
-    
+
+
+Threshold_Set:
+    clrf    threshold, A
+    call    LCD_Setup
+write_Threshold_Temp:
+    call    LCD_FirstLine
+    lfsr    0, myArray		; Load FSR0 with address in RAM	
+    movlw   low highword(Threshold)   ; address of data in PM
+    movwf   TBLPTRU, A		; load upper bits to TBLPTRU
+    movlw   high(Threshold)	; address of data in PM
+    movwf   TBLPTRH, A		; load high byte to TBLPTRH
+    movlw   low(Threshold)	; address of data in PM
+    movwf   TBLPTRL, A		; load low byte to TBLPTRL
+    movlw   Threshold_l		; bytes to read
+    movwf   counter, A		; our counter register
+Threshold_loop:
+    tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
+    movff   TABLAT, POSTINC0	; move data from TABLAT to (FSR0), inc FSR0	
+    decfsz  counter, A		; count down to zero
+    bra	    Threshold_loop	; keep going until finished
+
+    movlw   Threshold_l-1	; output message to LCD
+				; don't send the final carriage return to LCD
+    lfsr    2, myArray
+    call    LCD_Write_Message
+
+Threshold_Enter:
+    movlw   0x01
+    movwf   KeyPad_detector, A
+    call    delay3
+Threshold_Enter_loop:
+    movlw   0x00
+    cpfseq  KeyPad_detector, A
+    bra	    Threshold_Enter_loop
+    call    Threshold_Enter_1
+    call    delay1
+    goto    setup
+
+Threshold_Enter_1:
+    call    LCD_SecondLine
+    movff   KeyPad_TEMP, threshold
+    lfsr    0, myArray
+    movff   threshold, POSTINC0
+    lfsr    2, myArray
+    movlw   1
+    call    LCD_Write_Message
+    movlw   0x30
+    subwf   threshold, 1, 0
+    call    delay3
+    return
+
 
 ; some delay subroutines
 delay:

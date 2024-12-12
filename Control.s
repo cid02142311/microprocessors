@@ -3,6 +3,7 @@
 extrn	target_temp
 extrn	temp_diff
 extrn	temp_rate_diff
+extrn	threshold
 
 global	PWM_Setup, Temperature_Control
 
@@ -10,8 +11,8 @@ global	PWM_Setup, Temperature_Control
 psect	udata_acs   ; reserve data space in access ram
 delay_count:	ds  1
 ;; Define PWM parameters
-FAN_PIN	    EQU  0x00	; Pin controlling the fan (could be connected to a MOSFET)
-HEATER_PIN  EQU  0x00	; Pin controlling the heater (could be connected to a MOSFET)
+FAN_PIN	    EQU  0	; Pin controlling the fan (could be connected to a MOSFET)
+HEATER_PIN  EQU  0	; Pin controlling the heater (could be connected to a MOSFET)
 PWM_counter:	ds  2
 
 
@@ -23,8 +24,13 @@ delay:
 
 
 PWM_Setup:
-    bsf	    TRISF, 0, A
-    bsf	    TRISG, 0, A
+;    bcf	    TRISF, FAN_PIN, A
+;    bcf	    TRISG, HEATER_PIN, A
+
+    movlw   00000000B
+    movwf   TRISD, A
+    movlw   00000000B
+    movwf   TRISG, A
 
 ;    movlw   0xff
 ;    movwf   PR2, A
@@ -47,15 +53,19 @@ Temperature_Control:
     goto    comp3
     goto    action
     comp3:
-    movlw   0x02
+    movf    threshold, W, A
     cpfsgt  temp_diff+2, A
     goto    no_action
     goto    action
 
 
 no_action:
-    bcf     PORTF, FAN_PIN, A
-    bcf     PORTG, HEATER_PIN, A
+;    bcf     LATF, FAN_PIN, A
+;    bcf     LATG, HEATER_PIN, A
+    movlw   00000000B
+    movwf   PORTD, A
+    movlw   00000000B
+    movwf   PORTG, A
     return
 
 action:
@@ -68,15 +78,23 @@ action:
 Turn_On_Fan:
     ; Turn on the fan (increase PWM duty cycle to full power)
 ;    call    Adjust_PWM_Fan	    ; Set the PWM duty cycle to maximum for the fan
-    bsf     PORTF, FAN_PIN, A	    ; Turn on the fan (via PWM)
-    bcf     PORTG, HEATER_PIN, A    ; Turn off the heater
+;    bsf     LATF, FAN_PIN, A	    ; Turn on the fan (via PWM)
+;    bcf     LATG, HEATER_PIN, A    ; Turn off the heater
+    movlw   00000001B
+    movwf   PORTD, A
+    movlw   00000000B
+    movwf   PORTG, A
     return
 
 Turn_On_Heater:
     ; Turn on the heater (increase PWM duty cycle to full power)
 ;    call    Adjust_PWM_Heater	    ; Set the PWM duty cycle to maximum for the heater
-    bsf     PORTG, HEATER_PIN, A    ; Turn on the heater (via PWM)
-    bcf     PORTF, FAN_PIN, A	    ; Turn off the fan
+;    bsf     LATG, HEATER_PIN, A    ; Turn on the heater (via PWM)
+;    bcf     LATF, FAN_PIN, A	    ; Turn off the fan
+    movlw   00000000B
+    movwf   PORTD, A
+    movlw   00000001B
+    movwf   PORTG, A
     return
 
 
