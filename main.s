@@ -1,6 +1,6 @@
 #include <xc.inc>
 
-extrn	UART_Setup, UART_Transmit_Message   ; external UART subroutines
+;extrn	UART_Setup, UART_Transmit_Message   ; external UART subroutines
 extrn	LCD_Setup, LCD_Write_Message, LCD_FirstLine, LCD_SecondLine
 					    ; external LCD subroutines
 extrn	ADC_Setup, ADC_Read		    ; external ADC subroutines
@@ -95,7 +95,7 @@ L_interrupts:
 setup:
     bcf	    CFGS		; point to Flash program memory  
     bsf	    EEPGD		; access Flash program memory
-    call    UART_Setup		; setup UART
+;    call    UART_Setup		; setup UART
     call    LCD_Setup		; setup LCD
     call    ADC_Setup		; setup ADC
     call    KeyPad_Setup	; setup KeyPad

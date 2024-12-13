@@ -21,7 +21,6 @@
       <itemPath>config.s</itemPath>
       <itemPath>KeyPad.s</itemPath>
       <itemPath>LCD.s</itemPath>
-      <itemPath>UART.s</itemPath>
       <itemPath>ADC.s</itemPath>
       <itemPath>Control.s</itemPath>
       <itemPath>differentiation.s</itemPath>

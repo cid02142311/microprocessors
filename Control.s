@@ -10,9 +10,6 @@ global	PWM_Setup, Temperature_Control
 
 psect	udata_acs   ; reserve data space in access ram
 delay_count:	ds  1
-;; Define PWM parameters
-FAN_PIN	    EQU  0	; Pin controlling the fan (could be connected to a MOSFET)
-HEATER_PIN  EQU  0	; Pin controlling the heater (could be connected to a MOSFET)
 PWM_counter:	ds  2
 
 
@@ -24,18 +21,21 @@ delay:
 
 
 PWM_Setup:
-;    bcf	    TRISF, FAN_PIN, A
-;    bcf	    TRISG, HEATER_PIN, A
+    movlw   0xFF
+    movwf   PR2, A
+    banksel CCPR2L
+    movlw   00001100B
+    movwf   CCP2CON, B
+    movlw   0x00
+    movwf   CCPR2L, B
+    banksel 0
+    movlw   00000101B
+    movwf   T2CON, A
+    clrf    TRISC, A
 
     movlw   00000000B
     movwf   TRISD, A
-    movlw   00000000B
-    movwf   TRISG, A
 
-;    movlw   0xff
-;    movwf   PR2, A
-;    movlw   0x0c
-;    movwf   CCP1CON, A
     return
 
 
@@ -60,12 +60,12 @@ Temperature_Control:
 
 
 no_action:
-;    bcf     LATF, FAN_PIN, A
-;    bcf     LATG, HEATER_PIN, A
+    banksel CCPR2L
+    movlw   0x00
+    movwf   CCPR2L, B
+    banksel 0
     movlw   00000000B
     movwf   PORTD, A
-    movlw   00000000B
-    movwf   PORTG, A
     return
 
 action:
@@ -77,24 +77,21 @@ action:
 
 Turn_On_Fan:
     ; Turn on the fan (increase PWM duty cycle to full power)
-;    call    Adjust_PWM_Fan	    ; Set the PWM duty cycle to maximum for the fan
-;    bsf     LATF, FAN_PIN, A	    ; Turn on the fan (via PWM)
-;    bcf     LATG, HEATER_PIN, A    ; Turn off the heater
-    movlw   00000001B
-    movwf   PORTD, A
+    call    Adjust_PWM_Fan	    ; Set the PWM duty cycle to maximum for the fan
+
     movlw   00000000B
-    movwf   PORTG, A
+    movwf   PORTD, A
     return
 
 Turn_On_Heater:
     ; Turn on the heater (increase PWM duty cycle to full power)
-;    call    Adjust_PWM_Heater	    ; Set the PWM duty cycle to maximum for the heater
-;    bsf     LATG, HEATER_PIN, A    ; Turn on the heater (via PWM)
-;    bcf     LATF, FAN_PIN, A	    ; Turn off the fan
-    movlw   00000000B
+    banksel CCPR2L
+    movlw   0x00
+    movwf   CCPR2L, B
+
+    banksel 0
+    movlw   00000010B
     movwf   PORTD, A
-    movlw   00000001B
-    movwf   PORTG, A
     return
 
 
@@ -104,56 +101,63 @@ Adjust_PWM_Fan:
     ; Scale temperature difference to PWM duty cycle (0-255 range)
     call    calculation
     movf    PWM_counter+1, W, A
-    movwf   CCPR1L, A		    ; Store result in CCPR1L (duty cycle register)
-    movf    PWM_counter, W, A
-    movwf   CCPR1H, A
+    banksel CCPR2L
+    movwf   CCPR2L, B		    ; Store result in CCPR1L (duty cycle register)
     return
 
-Adjust_PWM_Heater:
-    ; Adjust PWM duty cycle for the heater based on temperature difference
-    ; Scale temperature difference to PWM duty cycle (0-255 range)
-    call    calculation
-    movf    PWM_counter+1, W, A
-    movwf   CCPR1L, A		    ; Store result in CCPR1L (duty cycle register)
-    movf    PWM_counter, W, A
-    movwf   CCPR1H, A
-    return
+;Adjust_PWM_Heater:
+;    ; Adjust PWM duty cycle for the heater based on temperature difference
+;    ; Scale temperature difference to PWM duty cycle (0-255 range)
+;    call    calculation
+;    movf    PWM_counter+1, W, A
+;    movwf   CCPR1L, A		    ; Store result in CCPR1L (duty cycle register)
+;    movf    PWM_counter, W, A
+;    movwf   CCPR1H, A
+;    return
 
 
 calculation:
-    movlw   0x64
+    movlw   0xff
     mulwf   temp_diff, A
     MOVFF   PRODH, PWM_counter
     MOVFF   PRODL, PWM_counter+1
     
-    movlw   0x0A
+    movlw   0xff
     mulwf   temp_diff+1, A
     movf    PRODL, W, A
     addwf   PWM_counter+1, A
     movf    PRODH, W, A
     addwfc  PWM_counter, A
 
-    movlw   0x01
+    movlw   0x0A
     mulwf   temp_diff+2, A
     movf    PRODL, W, A
     addwf   PWM_counter+1, A
     movf    PRODH, W, A
     addwfc  PWM_counter, A
- 
-;    movlw   0x0A
-;    mulwf   temp_rate_diff, A
-;    movf    PRODL, W, A
-;    addwf   PWM_counter+1, A
-;    movf    PRODH, W, A
-;    addwfc  PWM_counter, A
-;
-;    movlw   0x01
-;    mulwf   temp_rate_diff+1, A
-;    movf    PRODL, W, A
-;    addwf   PWM_counter+1, A
-;    movf    PRODH, W, A
-;    addwfc  PWM_counter, A
 
+    movlw   0xff
+    mulwf   temp_rate_diff, A
+    movf    PRODL, W, A
+    addwf   PWM_counter+1, A
+    movf    PRODH, W, A
+    addwfc  PWM_counter, A
+
+    movlw   0x64
+    mulwf   temp_rate_diff+1, A
+    movf    PRODL, W, A
+    addwf   PWM_counter+1, A
+    movf    PRODH, W, A
+    addwfc  PWM_counter, A
+
+    movlw   0x00
+    cpfseq  PWM_counter, A
+    call    set_max
+    return
+
+set_max:
+    movlw   0xff
+    movwf   PWM_counter+1, A
     return
 
 end
