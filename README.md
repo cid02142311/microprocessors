@@ -3,6 +3,6 @@
 
 An Automated Temperature Control System Based on the PIC18F87K22 Microprocessor. 
 
-Report [here](Microprocessor_Report_Chengyun_Zhu.pdf).
+Report [here](<Microprocessor_Report_Chengyun Zhu.pdf>).
 
 Video [here](system.mp4).
